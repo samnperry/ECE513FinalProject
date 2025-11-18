@@ -4,6 +4,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import DeviceRegister from "./components/DeviceRegister";
+import React from 'react';
+
+import { Dashboard } from "./components/dashboard/Dashboard";
+import HeaderBar from './components/headerbar/HeaderBar';
+
 
 function App() {
   return (
@@ -16,6 +21,11 @@ function App() {
           <Route path="/device" element={<DeviceRegister />} />
         </Routes>
       </BrowserRouter>
+
+    <div>
+      <HeaderBar />
+      <Dashboard userId='123' />
+    </div>
     </div>
   );
 }
