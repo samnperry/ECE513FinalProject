@@ -1,46 +1,211 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Heart Rate Monitor — Milestone README
 
-## Available Scripts
+## Overview
 
-In the project directory, you can run:
+This milestone implements a basic heart-rate monitoring app:
 
-### `npm start`
+- User signup and login
+- Device registration (Heart Track)
+- IoT device sends heart rate and SpO₂ data to backend
+- Dashboard loads and displays measurements for a device
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+---
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Project Structure
 
-### `npm test`
+```
+heart-rate-monitor/
+│
+├── server/
+│   ├── index.js
+│   ├── db.js
+│   ├── routes/
+│   │     ├── authRoutes.js
+│   │     ├── deviceRoutes.js
+│   │     └── measurementRoutes.js
+│   ├── models/
+│         ├── user.js
+│         ├── device.js
+│         └── measurement.js
+│
+└── src/   (React frontend)
+    ├── App.tsx
+    ├── Login.tsx
+    ├── Signup.tsx
+    ├── DeviceRegister.tsx
+    └── components/
+          ├── dashboard/
+          └── headerbar/
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## 1. Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Install the following on your machine:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- Node.js
+- npm
+- MongoDB Atlas account
+- Particle Photon tools (for IoT device testing)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+---
 
-### `npm run eject`
+## 2. Backend Setup
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+From the project root:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. Install dependencies
+```bash
+cd server
+npm install
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+2. MongoDB Atlas
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+The MongoDB connection string is configured in `server/db.js`. Example:
+```js
+mongoose.connect(
+  "mongodb+srv://amberparker_db_user:<password>@ece513.wbdx1wo.mongodb.net/hrm"
+);
+```
 
-## Learn More
+3. Run the backend
+```bash
+cd server
+node index.js
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Expected output:
+```
+Server running on port 5001
+MongoDB connected
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Backend base URL:
+```
+http://localhost:5001
+```
+
+---
+
+## 3. Frontend Setup
+
+From the project root (React project folder):
+
+1. Install dependencies
+```bash
+npm install
+```
+
+2. Run the frontend
+```bash
+npm start
+```
+
+Frontend URL:
+```
+http://localhost:3000
+```
+
+---
+
+## 4. Using the Application (Milestone)
+
+Ensure backend and frontend are running.
+
+### 4.1 Create an account
+Open:
+```
+http://localhost:3000/signup
+```
+Enter email and password to create a user.
+
+### 4.2 Log in
+Open:
+```
+http://localhost:3000/login
+```
+On success:
+- JWT token stored in `localStorage`
+- User ID stored in `localStorage`
+- App redirects to `/dashboard`
+
+### 4.3 Register a device
+On the dashboard:
+- Enter a `deviceId` (e.g., `device123`)
+- Click "Register Device" — calls:
+```
+POST /api/device/register
+```
+Device is linked to the authenticated user.
+
+### 4.4 Load measurements
+On the dashboard:
+- Enter the same `deviceId`
+- Click "Load Measurements" — calls:
+```
+GET /api/measurements/:deviceId
+```
+Response (list of measurements) is displayed in the UI (JSON or simple list/table).
+
+---
+
+## 5. IoT Device (Photon + MAX30102)
+
+Device behavior:
+- Reads heart rate and SpO₂ from MAX30102
+- Prompts user on a fixed schedule (~30 minutes; shorter for testing)
+- Sends measurements to backend
+
+Measurement endpoint:
+```
+POST http://<server-ip>:5001/api/measurements
+```
+
+Example JSON body:
+```json
+{
+  "deviceId": "device123",
+  "heartRate": 75,
+  "spo2": 98
+}
+```
+
+When data is sent, new measurement documents appear in MongoDB Atlas and can be loaded on the dashboard.
+
+---
+
+## 6. API Endpoints (Summary)
+
+Auth
+- `POST /api/auth/signup` — create a new user
+- `POST /api/auth/login` — log in, return token and user info
+
+Devices
+- `POST /api/device/register` — register a device to the authenticated user
+
+Measurements
+- `POST /api/measurements` — save a new measurement from the IoT device
+- `GET /api/measurements/:deviceId` — get recent measurements for a device
+
+---
+
+## 7. Milestone Demo Flow
+
+Suggested demo order:
+1. Start backend: `node index.js` (in `server/`)
+2. Start frontend: `npm start` (project root)
+3. Show signup (`/signup`)
+4. Show login (`/login`) and redirect to `/dashboard`
+5. On dashboard, register a device
+6. Trigger IoT device to send a measurement for that `deviceId`
+7. Click "Load Measurements" and show new data
+
+---
+
+## 8. Notes
+
+This README documents the milestone version only. Additional features (weekly summaries, daily views, HTTPS, physician portal, etc.) will be added for the final project.
+

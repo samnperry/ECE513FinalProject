@@ -22,12 +22,18 @@ const Login: React.FC = function() {
 
       if (!res.ok) {
         setMessage(data.error || "Login failed");
-      } 
+        return;
+      }
 
       localStorage.setItem("token", data.token);
-      setMessage(data.message);
+      if (data.user && data.user.id) {
+        localStorage.setItem("userId", data.user.id);
+      }
+
+      navigate("/dashboard");
+
     } catch (err: any) {
-      alert(err.message);
+      setMessage("Network error: " + err.message);
     }
   };
 
@@ -52,8 +58,7 @@ const Login: React.FC = function() {
         <button type="submit">Login</button>
         {message && <p style={{ color: "red" }}>{message}</p>}
         <p>
-          Don't have an account?{" "}
-          <Link to="/signup">Sign up here</Link>
+          Don't have an account? <Link to="/signup">Sign up here</Link>
         </p>
       </form>
     </div>
