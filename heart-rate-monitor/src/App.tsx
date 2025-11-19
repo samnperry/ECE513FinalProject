@@ -4,29 +4,34 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import DeviceRegister from "./components/DeviceRegister";
-import React from 'react';
 
-import { Dashboard } from "./components/dashboard/Dashboard";
-import HeaderBar from './components/headerbar/HeaderBar';
-
+import { Dashboard } from "./components/dashboard/Dashboard"; 
+import HeaderBar from "./components/headerbar/HeaderBar";
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
+    <BrowserRouter>
+      <div className="App">
         <Routes>
+          {/* default route → login */}
           <Route index element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/device" element={<DeviceRegister />} />
-        </Routes>
-      </BrowserRouter>
 
-    <div>
-      <HeaderBar />
-      <Dashboard userId='123' />
-    </div>
-    </div>
+          {/* dashboard route with header + dashboard together */}
+          <Route
+            path="/dashboard"
+            element={
+              <>
+                <HeaderBar />
+                <Dashboard userId="123" />
+              </>
+            }
+          />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 
