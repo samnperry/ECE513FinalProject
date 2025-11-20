@@ -1,26 +1,14 @@
-SYSTEM_THREAD(ENABLED); // uncomment this to use your particle device without WIFI connection
-int counter = 0;
-int LED = D7;
-// setup() runs once, when the device is first turned on.
+int led = D7;
+
 void setup() {
-// Put initialization like pinMode and begin functions here.
-pinMode(LED, OUTPUT);
-RGB.control(true); // take control of the RGB LED
-Serial.begin();
+    pinMode(led, OUTPUT);
 }
-// loop() runs over and over again, as quickly as it can execute.
-void loop() {
-// The core of your code will likely live here.
-if (counter % 2 == 0) {
-digitalWrite(LED, HIGH);
-RGB.color(255, 0, 0); // set color red
-}
-else {
-digitalWrite(LED, LOW);
-RGB.color(0, 255, 0); // set color green
-}
-counter++;
-Serial.printf("{\"t\":%d,\"str\":\"%s\"}", (int)Time.now(), Time.timeStr().c_str());
-Serial.println(); // \r\n
-delay(1000);
+
+void loop(){
+    digitalWrite(led, HIGH);
+
+    String Photon2_513 = String(random(60,80));
+    Particle.variable("Photon2_513", Photon2_513);
+    Particle.publish("Photon2_513", Photon2_513, PRIVATE);
+    delay(30000);
 }
