@@ -1,0 +1,12 @@
+textarea{
+    width:95%;
+    height: 150px;
+    margin:20px;
+    padding:20px;
+}
+.button-container{
+    
+}
+button{
+    background-color:lightpurple;
+}

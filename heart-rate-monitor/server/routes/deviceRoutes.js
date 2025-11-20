@@ -1,0 +1,60 @@
+var express = require("express");
+var Device = require("../models/device");
+var User = require("../models/user");
+var jwt = require("jwt-simple");
+
+var router = express.Router();
+var SECRET = "super-secret-key";
+
+function getUserFromToken(req) {
+  const token = req.headers.authorization?.split(" ")[1]; // x-auth 
+  if (!token) {
+    return null;
+  }
+
+  try {
+    return jwt.decode(token, SECRET);
+  } catch {
+    return null;
+  }
+}
+
+router.post("/register", async function(req, res) {
+  const { deviceId, nickname } = req.body;
+
+  const userData = getUserFromToken(req);
+  if (!userData) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const user = await User.findById(userData.id);
+
+    const existing = await Device.findOne({ deviceId });
+    if (existing) {
+      return res.status(400).json({ error: "Device already registered" });
+    }
+
+    const device = await Device.create({
+      deviceId,
+      nickname,
+      user: user._id
+    });
+
+    user.devices.push(device._id);
+    await user.save();
+
+    res.json({
+      message: "Device registered",
+      device: {
+        id: device._id,
+        deviceId: device.deviceId,
+        nickname: device.nickname
+      }
+    });
+  } catch {
+    res.status(500).json({ error: "Failed to register device" });
+  }
+});
+
+module.exports = router;
