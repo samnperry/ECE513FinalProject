@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./pages/Pages.css";
 
 const DeviceRegister: React.FC = function() {
   const [deviceId, setDeviceId] = useState("");
@@ -37,24 +38,30 @@ const DeviceRegister: React.FC = function() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Register Device</h2>
-      <input
-        type="text"
-        placeholder="Photon 2 Device ID"
-        value={deviceId}
-        onChange={(e) => setDeviceId(e.target.value)}
-        required
-      />
-      <input
-        type="text"
-        placeholder="Nickname"
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-      />
-      <button type="submit">Register Device</button>
-      {message && <p style={{ color: "red" }}>{message}</p>}
-    </form>
+    <main className="page-container auth-page">
+      <div className="card form-card">
+        <h2>Register Device</h2>
+        <form className="form-actions" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Photon 2 Device ID"
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value)}
+            required
+            className="full-width"
+          />
+          <input
+            type="text"
+            placeholder="Nickname"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className="full-width"
+          />
+          <button className="primary-btn" type="submit">Register Device</button>
+          {message && <p className="error-text">{message}</p>}
+        </form>
+      </div>
+    </main>
   );
 };
 
