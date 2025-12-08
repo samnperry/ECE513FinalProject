@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import "./pages/Pages.css";
+import "../pages/Pages.css";
 
-const DeviceRegister: React.FC = function() {
+const DeviceRegister: React.FC = function () {
   const [deviceId, setDeviceId] = useState("");
   const [nickname, setNickname] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = async function(e: React.FormEvent) {
+  const handleSubmit = async function (e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
 
@@ -27,13 +27,18 @@ const DeviceRegister: React.FC = function() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setMessage(data.error || "Registration failed");
+        return;
       }
+      
+      setMessage(`Device registered successfully! ID: ${data.device.id}`);
+      setDeviceId("");
+      setNickname("");
 
-      setMessage(data.message);
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      setMessage("Network error: " + err?.message);
     }
   };
 
@@ -52,13 +57,25 @@ const DeviceRegister: React.FC = function() {
           />
           <input
             type="text"
-            placeholder="Nickname"
+            placeholder="Nickname (optional)"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             className="full-width"
           />
-          <button className="primary-btn" type="submit">Register Device</button>
-          {message && <p className="error-text">{message}</p>}
+          <button className="primary-btn" type="submit">
+            Register Device
+          </button>
+          {message && (
+            <p
+              style={{
+                color: message.includes("successfully") ? "green" : "#b91c1c",
+                margin: 0,
+                fontWeight: 600,
+              }}
+            >
+              {message}
+            </p>
+          )}
         </form>
       </div>
     </main>

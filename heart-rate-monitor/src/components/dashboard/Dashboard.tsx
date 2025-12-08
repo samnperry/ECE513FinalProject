@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Chart from "chart.js/auto";
 import "./Dashboard.css";
 
@@ -54,6 +55,8 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
 
   const API_BASE = "http://localhost:5001"; // backend
   const token = localStorage.getItem("token");
+
+  const navigate = useNavigate();
 
   const registerDevice = async () => {
     setError("");
@@ -384,6 +387,13 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
               onClick={registerDevice}
             >
               Register device
+            </button>
+            <button
+              className="link-button"
+              type="button"
+              onClick={() => navigate("/assign-physician")}
+            >
+              Assign physician
             </button>
           </div>
           <p className="helper">

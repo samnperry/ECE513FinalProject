@@ -1,12 +1,16 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Login from "./components/Login";
-import Signup from "./components/Signup";
-import DeviceRegister from "./components/DeviceRegister";
-
-import { Dashboard } from "./components/dashboard/Dashboard"; 
+import Login from "./components/login/Login";
+import Signup from "./components/signup/Signup";
+import DeviceRegister from "./components/deviceRegister/DeviceRegister";
+import { Dashboard } from "./components/dashboard/Dashboard";
 import HeaderBar from "./components/headerbar/HeaderBar";
+import PhysicianDashboard from "./components/physicianDashboard/physicianDashboard";
+import AssignPhysician from "./components/assignPhysician/assignPhysician";
+import PhysicianPatientDashboard from "./components/physicianPatientsDashboard/physicianPatientsDashboard";
+import PatientSummary from "./components/patientSummary/patientSummary";
+import PatientDailyDetails from "./components/patientDailyDetails/patientDailyDetails";
 import HomePage from "./components/pages/HomePage";
 import ReferencePage from "./components/pages/ReferencePage";
 import AccountPage from "./components/pages/AccountPage";
@@ -18,7 +22,7 @@ function App() {
       <div className="App">
         <HeaderBar />
         <Routes>
-          {/* default route → login (original flow) */}
+          {/* Default routes → login */}
           <Route index element={<Login />} />
           <Route
             path="/home"
@@ -55,7 +59,7 @@ function App() {
             }
           />
 
-          {/* dashboard route */}
+          {/* User dashboard */}
           <Route
             path="/dashboard"
             element={
@@ -64,6 +68,15 @@ function App() {
               </RequireAuth>
             }
           />
+
+          {/* Physician routes */}
+          <Route path="/assign-physician" element={<AssignPhysician />} />
+          <Route path="/physician-dashboard" element={<PhysicianDashboard />}>
+            {/* Nested physician routes */}
+            <Route path="patients" element={<PhysicianPatientDashboard />} />
+            <Route path="patient/:id/summary" element={<PatientSummary />} />
+            <Route path="patient/:id/daily" element={<PatientDailyDetails />} />
+          </Route>
         </Routes>
       </div>
     </BrowserRouter>

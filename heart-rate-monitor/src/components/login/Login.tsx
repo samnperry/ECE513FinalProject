@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "./pages/Pages.css";
 
-const Login: React.FC = function() {
+const Login: React.FC = function () {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = async function(e: React.FormEvent) {
+  const handleSubmit = async function (e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
 
@@ -29,9 +29,21 @@ const Login: React.FC = function() {
       localStorage.setItem("token", data.token);
       if (data.user && data.user.id) {
         localStorage.setItem("userId", data.user.id);
+        localStorage.setItem("role", data.user.role);
       }
 
-      navigate("/dashboard");
+      if (data.user.role === "physician") {
+        navigate("/physician-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+
+
+      if (data.user.role === "physician") {
+        navigate("/physician-dashboard");
+      } else {
+        navigate("/dashboard");
+      }
 
     } catch (err: any) {
       setMessage("Network error: " + err.message);
