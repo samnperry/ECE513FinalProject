@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Dashboard.css";
 
 type DashboardProps = {
@@ -13,6 +14,8 @@ export function Dashboard({ userId }: DashboardProps) {
 
   // use the token Sam gets you on login
   const token = localStorage.getItem("token");
+
+  const navigate = useNavigate();
 
   const registerDevice = async () => {
     try {
@@ -58,6 +61,9 @@ export function Dashboard({ userId }: DashboardProps) {
         />
         <button onClick={registerDevice}>Register Device</button>
         <button onClick={loadMeasurements}>Load Measurements</button>
+        <button onClick={() => navigate("/assign-physician")}>
+          Assign Physician
+        </button>
       </div>
 
       <textarea

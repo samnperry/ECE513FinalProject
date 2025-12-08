@@ -26,13 +26,18 @@ const DeviceRegister: React.FC = function() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setMessage(data.error || "Registration failed");
+        return;
       }
+      
+      setMessage(`Device registered successfully! ID: ${data.device.id}`);
+      setDeviceId("");
+      setNickname("");
 
-      setMessage(data.message);
     } catch (err: any) {
-      alert(err.message);
+      setMessage("Network error: " + err.message);
     }
   };
 
@@ -48,12 +53,16 @@ const DeviceRegister: React.FC = function() {
       />
       <input
         type="text"
-        placeholder="Nickname"
+        placeholder="Nickname (optional)"
         value={nickname}
         onChange={(e) => setNickname(e.target.value)}
       />
       <button type="submit">Register Device</button>
-      {message && <p style={{ color: "red" }}>{message}</p>}
+      {message && (
+        <p style={{ color: message.includes("successfully") ? "green" : "red" }}>
+          {message}
+        </p>
+      )}
     </form>
   );
 };
