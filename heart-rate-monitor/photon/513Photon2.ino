@@ -7,31 +7,40 @@
 
 //SYSTEM_THREAD(ENABLED); // Optional
 
-// Measurment Send Frequency (ms)
-const unsigned long PUBLISH_INTERVAL_MS = 5000; // every 5 seconds
+// Measurment And Send Frequency (ms)
+const unsigned long PUBLISH_INTERVAL_MS     = 5000;                 // every 5 seconds
+const unsigned long MEASURMENT_TIMEOUT_MS   = 5UL * 60UL * 1000UL;  // min:sec - timeout after no measurement
+const unsigned long LED_FLASH_INTERVAL_MS   = 500;                  // flash speed (ms)
+unsigned long measurementStartMS = 0;
+unsigned long lastLEDToggleMS   = 0;
+
+
 
 // Particle Vars
 int LED = D7;
 String trueDeviceId = "0a10aced202194944a064eec";
 String deviceId;
 unsigned long lastPublish = 0;
+bool measurementTaken = false;
 
 // Sensor Vars
+const unsigned long SAMPLE_INTERVAL_MS = 40;    // 25 samples per second
+const int BUFFER_LENGTH = 100;                  // 4 seconds of data at 25 samples/sec
+unsigned long lastSampleTime = 0;
+
 MAX30105 particleSensor;            // for MAX3010x devices
-const int BUFFER_LENGTH = 100;      // 4 seconds of data at 25 samples/sec
 uint32_t irBuffer[BUFFER_LENGTH];
 uint32_t redBuffer[BUFFER_LENGTH];
 
-int32_t spo2 = 0;                  // Calculated SpO2
-int8_t  validSPO2 = 0;             // 1 = valid, 0 = invalid
-int32_t heartRate = 0;             // Calculated heart rate
-int8_t  validHeartRate = 0;        // 1 = valid, 0 = invalid
+int32_t spo2 = 0;                   // Calculated SpO2
+int8_t  validSPO2 = 0;              // 1 = valid, 0 = invalid
+int32_t heartRate = 0;              // Calculated heart rate
+int8_t  validHeartRate = 0;         // 1 = valid, 0 = invalid
 
 int bufferIndex = 0;
 bool bufferFilled = false;
 
-const unsigned long SAMPLE_INTERVAL_MS = 40;  // 25 samples per second
-unsigned long lastSampleTime = 0;
+
 
 //-------//
 // Setup //
@@ -40,8 +49,13 @@ void setup() {
     // Init LED
     pinMode(LED, OUTPUT);
     digitalWrite(LED, LOW);
-    RGB.control(true);             // Take control of the RGB LED
-    RGB.color(0, 0, 255);          // Blue while starting
+    RGB.control(true);              // Take control of the RGB LED
+    RGB.color(0, 0, 255);           // Blue while starting
+
+    // Init Wait Window Timers
+    measurementTaken  = false;
+    measurementStartMS = millis(); 
+    lastLEDToggleMS   = millis();
 
     // Serial Setup
     Serial.begin(115200);
@@ -93,8 +107,23 @@ void setup() {
 //-----------//
 void loop() {
     sampleMax30102();      // update heartRate & spo2
-
     unsigned long now = millis();
+
+    // D7 Flashing and 5 min Timeout
+    if (!measurementTaken) {
+        // If within timeout period
+        if (now - measurementStartMS < MEASURMENT_TIMEOUT_MS) {
+            // LED Flash
+            if (now - lastLEDToggleMS >= LED_FLASH_INTERVAL_MS) {
+                digitalWrite(LED, !digitalRead(LED));
+                lastLEDToggleMS = now;
+            }
+        }
+        else {  // Particle Times out
+            digitalWrite(LED, LOW);     // Turn off LED if timeout
+            measurementTaken = true;    // Stop flashing
+        }
+    }
 
     if (now - lastPublish >= PUBLISH_INTERVAL_MS) {
         lastPublish = now;
@@ -102,9 +131,8 @@ void loop() {
         bool hasValid = (validHeartRate == 1 && validSPO2 == 1);
 
         if (hasValid) {
-            // Toggle LED and show green when readings are valid
-            digitalWrite(LED, !digitalRead(LED));
-            RGB.color(0, 255, 0);
+            RGB.color(0, 255, 0);   // Show green when readings are valid
+            sendMeasurement();      // Publish
         } else {
             // Solid LED off and RGB orange while waiting for valid data
             digitalWrite(LED, LOW);
@@ -180,8 +208,9 @@ void sampleMax30102() {
 }
 
 void sendMeasurement() {
-    // Unix timestamp
-    unsigned long ts = Time.now();
+    unsigned long ts = Time.now();  // Unix timestamp
+    measurementTaken = true; 
+    digitalWrite(LED, HIGH);
 
     // JSON Example Payload:
     // {
