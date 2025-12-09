@@ -18,7 +18,7 @@ void loop();
 void sampleMax30102();
 void sendMeasurement();
 #line 11 "/Users/sevengilbert/Desktop/ECE513FinalProject/heart-rate-monitor/photon/513Photon2.ino"
-const unsigned long PUBLISH_INTERVAL_MS     = 5000;                 // every 5 seconds
+const unsigned long PUBLISH_INTERVAL_MS     = 5 * 1000;            // every x seconds
 const unsigned long MEASURMENT_TIMEOUT_MS   = 5UL * 60UL * 1000UL;  // min:sec - timeout after no measurement
 const unsigned long LED_FLASH_INTERVAL_MS   = 500;                  // flash speed (ms)
 unsigned long measurementStartMS = 0;
@@ -135,19 +135,11 @@ void loop() {
         }
     }
 
+    // Publish results
     if (now - lastPublish >= PUBLISH_INTERVAL_MS) {
         lastPublish = now;
 
         bool hasValid = (validHeartRate == 1 && validSPO2 == 1);
-
-        if (hasValid) {
-            RGB.color(0, 255, 0);   // Show green when readings are valid
-            sendMeasurement();      // Publish
-        } else {
-            // Solid LED off and RGB orange while waiting for valid data
-            digitalWrite(LED, LOW);
-            RGB.color(255, 100, 0);
-        }
 
         /// Debug 
         Serial.print("HR = ");
@@ -160,9 +152,14 @@ void loop() {
         Serial.print(validSPO2);
         Serial.println(")");
         //*/
-        
+
         if (hasValid) {
-            sendMeasurement();  // publish event for webhook
+            RGB.color(0, 255, 0);   // Show green when readings are valid
+            sendMeasurement();      // Publish event to webhook
+        } else {
+            // Solid LED off and RGB orange while waiting for valid data
+            digitalWrite(LED, LOW);
+            RGB.color(255, 165, 0); // Orange
         }
     }
 }
@@ -245,9 +242,48 @@ void sendMeasurement() {
 
     bool ok = Particle.publish("Photon2_SendEvent", payload, PRIVATE);
 
+    // LED behavior for measurment sent and Degug 
+    const unsigned int max_flashes = 3;   
+
     if (ok) {
         Serial.println("Published: " + payload);
+
+        // RGB blink on success 
+        RGB.color(0, 0, 0);
+        for (unsigned int i = 0; i < max_flashes; i++) {
+            
+            RGB.color(0, 255, 0);   // ON (green)
+            delay(LED_FLASH_INTERVAL_MS);
+            
+            RGB.color(0, 0, 0);     // OFF
+            delay(LED_FLASH_INTERVAL_MS);
+        }
+
+        RGB.color(0, 0, 0);         // End off
+
     } else {
         Serial.println("Publish failed");
+
+        // RGB blink on fail 
+        RGB.color(0, 0, 0);
+        for (unsigned int i = 0; i < max_flashes; i++) {
+            
+            RGB.color(255, 255, 0);   // ON (yellow)
+            delay(LED_FLASH_INTERVAL_MS);
+            
+            RGB.color(0, 0, 0);     // OFF
+            delay(LED_FLASH_INTERVAL_MS);
+        }
+        
+        RGB.color(0, 0, 0);         // End off
     }
+    /*/ Reset sample memory
+    bufferIndex    = 0;
+    bufferFilled   = false;
+    heartRate      = 0;
+    spo2           = 0;
+    validHeartRate = 0;
+    validSPO2      = 0;
+    particleSensor.clearFIFO();  // Clear hardware FIFO as well
+    //*/
 }
