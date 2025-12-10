@@ -16,6 +16,7 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "bcrypt": "^6.0.0",
+    "chart.js": "^4.5.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jwt-simple": "^0.5.6",

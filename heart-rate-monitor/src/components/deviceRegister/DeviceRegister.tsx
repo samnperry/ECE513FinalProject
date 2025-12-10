@@ -1,11 +1,12 @@
 import React, { useState } from "react";
+import "../pages/Pages.css";
 
-const DeviceRegister: React.FC = function() {
+const DeviceRegister: React.FC = function () {
   const [deviceId, setDeviceId] = useState("");
   const [nickname, setNickname] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = async function(e: React.FormEvent) {
+  const handleSubmit = async function (e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
 
@@ -36,34 +37,48 @@ const DeviceRegister: React.FC = function() {
       setDeviceId("");
       setNickname("");
 
-    } catch (err: any) {
-      setMessage("Network error: " + err.message);
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      setMessage("Network error: " + err?.message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Register Device</h2>
-      <input
-        type="text"
-        placeholder="Photon 2 Device ID"
-        value={deviceId}
-        onChange={(e) => setDeviceId(e.target.value)}
-        required
-      />
-      <input
-        type="text"
-        placeholder="Nickname (optional)"
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-      />
-      <button type="submit">Register Device</button>
-      {message && (
-        <p style={{ color: message.includes("successfully") ? "green" : "red" }}>
-          {message}
-        </p>
-      )}
-    </form>
+    <main className="page-container auth-page">
+      <div className="card form-card">
+        <h2>Register Device</h2>
+        <form className="form-actions" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Photon 2 Device ID"
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value)}
+            required
+            className="full-width"
+          />
+          <input
+            type="text"
+            placeholder="Nickname (optional)"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            className="full-width"
+          />
+          <button className="primary-btn" type="submit">
+            Register Device
+          </button>
+          {message && (
+            <p
+              style={{
+                color: message.includes("successfully") ? "green" : "#b91c1c",
+                margin: 0,
+                fontWeight: 600,
+              }}
+            >
+              {message}
+            </p>
+          )}
+        </form>
+      </div>
+    </main>
   );
 };
 

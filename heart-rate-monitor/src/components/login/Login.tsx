@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "../pages/Pages.css";
 
 const Login: React.FC = function () {
   const [email, setEmail] = useState("");
@@ -50,30 +51,34 @@ const Login: React.FC = function () {
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit}>
+    <main className="page-container auth-page">
+      <div className="card form-card">
         <h2>Login</h2>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Login</button>
-        {message && <p style={{ color: "red" }}>{message}</p>}
-        <p>
-          Don't have an account? <Link to="/signup">Sign up here</Link>
+        <form className="form-actions" onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="full-width"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="full-width"
+          />
+          <button className="primary-btn" type="submit">Login</button>
+          {message && <p className="error-text">{message}</p>}
+        </form>
+        <p className="auth-footer">
+          Don&apos;t have an account? <Link to="/signup">Sign up here</Link>
         </p>
-      </form>
-    </div>
+      </div>
+    </main>
   );
 };
 
