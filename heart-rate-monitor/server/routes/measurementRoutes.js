@@ -3,6 +3,22 @@ var Measurement = require("../models/measurement");
 
 var router = express.Router();
 
+// Optional API key check for device-originated requests. If DEVICE_API_KEY is
+// unset, the check is skipped to preserve backward compatibility.
+function requireApiKey(req, res, next) {
+    const expected = process.env.DEVICE_API_KEY;
+    if (!expected) return next();
+
+    const provided = req.headers["x-api-key"];
+    if (provided && provided === expected) {
+        return next();
+    }
+
+    return res.status(401).json({ error: "Invalid or missing API key" });
+}
+
+router.use(requireApiKey);
+
 router.post("/", async function (req, res) {
     try {
         const { deviceId, heartRate, spo2 } = req.body;

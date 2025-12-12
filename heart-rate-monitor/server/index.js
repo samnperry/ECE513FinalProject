@@ -9,7 +9,22 @@ const accountsRoutes = require("./routes/accountsRoutes");
 const physicianRoutes = require("./routes/physicianRoutes.js");
 
 var app = express();
-app.use(cors());
+// Respect proxy headers (needed when running behind Nginx/ALB for HTTPS)
+app.set("trust proxy", 1);
+
+// CORS: allow configured origin(s); default to permissive for local/dev
+const allowedOrigins =
+    process.env.FRONTEND_ORIGIN ||
+    process.env.CORS_ORIGIN ||
+    "*";
+
+app.use(
+    cors({
+        origin: allowedOrigins === "*"
+            ? "*"
+            : allowedOrigins.split(",").map((o) => o.trim()),
+    })
+);
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
