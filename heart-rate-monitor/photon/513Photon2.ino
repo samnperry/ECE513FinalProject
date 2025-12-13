@@ -1,6 +1,5 @@
 /////////////////////////////////////////////////////
 // Connects Sensors to AWS through Particle Cloud. //
-// State-machine restructure (ECE 513 requirements) //
 /////////////////////////////////////////////////////
 
 #include "Particle.h"
@@ -10,23 +9,23 @@
 SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
 
 // |~~~~~~~~~~~~~~| Defaults / Requirements |~~~~~~~~~~~~~~|
-const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL; // default: 30 min
+const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL;  // default: 30 min
 const unsigned long PROMPT_WINDOW_MS        = 5UL  * 60UL * 1000UL; // prompt window: 5 min
 const unsigned long LED_BLINK_MS            = 500;                  // blink speed
 const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
 const unsigned long ACK_TIMEOUT_MS          = 10UL * 1000UL;        // wait for webhook response
 
 const uint8_t ALLOWED_START_HOUR = 6;   // 6am
-const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm (exclusive)
+const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
 
 const uint32_t FINGER_IR_THRESHOLD = 20000; // tune for your sensor/module
 const uint8_t  STABLE_REQUIRED     = 6;     // consecutive valid algorithm outputs needed
 
-// Particle webhook event name (must match your webhook trigger)
+// Particle webhook event name 
 const char* MEAS_EVENT = "Photon2_SendEvent";
 
-// Backend API key requirement (put your real key here)
-const char* API_KEY = "REPLACE_WITH_REAL_API_KEY";
+// Backend API key requirement
+const char* API_KEY = "3cf562803c98eee6f2df540bdc3b45a61e2b93200790ca78dbbfe4c3ce47a38c";
 
 // |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
 const int LED_D7 = D7;
@@ -68,7 +67,7 @@ struct QueueHeader {
   uint16_t count;       // number of valid records
 };
 
-const uint32_t QUEUE_MAGIC    = 0x51305130; // "5130"-ish marker
+const uint32_t QUEUE_MAGIC    = 0x51305130; // marker
 const uint16_t QUEUE_CAPACITY = 64;
 const int EEPROM_ADDR_HEADER  = 0;
 const int EEPROM_ADDR_RECORDS = EEPROM_ADDR_HEADER + sizeof(QueueHeader);
