@@ -284,7 +284,7 @@
           </div>
           <div class="card">
             <h3>Deployment ready</h3>
-            <p class="muted">HTTPS via EngineX, configurable CORS, and API base for AWS deployment.</p>
+            <p class="muted">HTTPS via NGINX, configurable CORS, and API base for AWS deployment.</p>
           </div>
         </div>
         <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -311,7 +311,10 @@
           body.classList.remove("landing-active");
         };
 
-        if (sessionStorage.getItem("hideLanding") || localStorage.getItem("token")) {
+        const path = window.location.pathname;
+        // Auto-show the React app on any deep link (not the root landing),
+        // or if the user already chose to continue during this session.
+        if (path !== "/" || sessionStorage.getItem("hideLanding")) {
           showApp();
         }
 
