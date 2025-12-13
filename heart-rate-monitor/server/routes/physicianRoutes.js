@@ -75,12 +75,48 @@ router.get("/patients", async (req, res) => {
 
     try {
         const physicianId = check.user._id;
-        const patients = await User.find(
-            { assignedPhysician: physicianId },
-            "email devices"
-        );
+        const patients = await User.find({ assignedPhysician: physicianId })
+            .populate("devices", "deviceId nickname");
 
-        res.json({ patients });
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - 6); // last 7 days including today
+
+        const enriched = [];
+        for (const p of patients) {
+            const deviceIds = (p.devices || []).map((d) => d.deviceId);
+            let avgHeartRate = null;
+            let minHeartRate = null;
+            let maxHeartRate = null;
+
+            if (deviceIds.length > 0) {
+                const readings = await Measurement.find({
+                    deviceId: { $in: deviceIds },
+                    timestamp: { $gte: start },
+                }).select("heartRate");
+
+                if (readings.length > 0) {
+                    const rates = readings.map((r) => r.heartRate);
+                    const total = rates.reduce((sum, v) => sum + v, 0);
+                    avgHeartRate = Math.round(total / rates.length);
+                    minHeartRate = Math.min(...rates);
+                    maxHeartRate = Math.max(...rates);
+                }
+            }
+
+            enriched.push({
+                _id: p._id,
+                email: p.email,
+                devices: p.devices,
+                stats: {
+                    avgHeartRate,
+                    minHeartRate,
+                    maxHeartRate,
+                },
+            });
+        }
+
+        res.json({ patients: enriched });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Failed" });
@@ -110,7 +146,11 @@ router.get("/patient/:id/summary", async (req, res) => {
                 .limit(1);
 
             summaries.push({
-                device: { deviceId: d.deviceId, nickname: d.nickname },
+                device: {
+                    deviceId: d.deviceId,
+                    nickname: d.nickname,
+                    measurementFrequencySeconds: d.measurementFrequencySeconds,
+                },
                 latest: latest
                     ? {
                           bpm: latest.heartRate,

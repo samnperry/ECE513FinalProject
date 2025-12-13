@@ -30,9 +30,11 @@ export default function Header() {
         </div>
 
         <nav className="nav-links">
-          <NavLink to="/home" className={getLinkClass}>
-            Home
-          </NavLink>
+          {role === "physician" && (
+            <NavLink to="/physician-dashboard/patients" className={getLinkClass}>
+              Physician Dashboard
+            </NavLink>
+          )}
           {role !== "physician" && <NavLink to="/dashboard" className={getLinkClass}>Dashboard</NavLink>}
           <NavLink to="/reference" className={getLinkClass}>
             Reference
@@ -43,11 +45,6 @@ export default function Header() {
           {role !== "physician" && (
             <NavLink to="/device" className={getLinkClass}>
               Devices
-            </NavLink>
-          )}
-          {role === "physician" && (
-            <NavLink to="/physician-dashboard/patients" className={getLinkClass}>
-              Patients
             </NavLink>
           )}
           {!isAuthenticated && (

@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import AdjustPatientFrequency from "../adjustPatientFrequency/adjustPatientFrequency";
 
 interface DeviceSummary {
-  device: { deviceId: string };
+  device: { deviceId: string; nickname?: string; measurementFrequencySeconds?: number };
   latest: { bpm: number; timestamp: string } | null;
 }
 

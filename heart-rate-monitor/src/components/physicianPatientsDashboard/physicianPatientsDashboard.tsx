@@ -4,7 +4,12 @@ import { Link } from "react-router-dom";
 interface Patient {
   _id: string;
   email: string;
-  devices: any[];
+  devices: { deviceId: string }[];
+  stats?: {
+    avgHeartRate: number | null;
+    minHeartRate: number | null;
+    maxHeartRate: number | null;
+  };
 }
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
@@ -51,6 +56,9 @@ const PhysicianPatientDashboard: React.FC = () => {
               <tr>
                 <th>Email</th>
                 <th>Devices</th>
+                <th>7d Avg</th>
+                <th>7d Min</th>
+                <th>7d Max</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -59,6 +67,9 @@ const PhysicianPatientDashboard: React.FC = () => {
                 <tr key={p._id}>
                   <td>{p.email}</td>
                   <td>{p.devices.length}</td>
+                  <td>{p.stats?.avgHeartRate ?? "—"}</td>
+                  <td>{p.stats?.minHeartRate ?? "—"}</td>
+                  <td>{p.stats?.maxHeartRate ?? "—"}</td>
                   <td>
                     <Link to={`/physician-dashboard/patient/${p._id}/summary`}>Summary</Link>{" "}
                     |{" "}
