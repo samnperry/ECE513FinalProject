@@ -3,18 +3,25 @@ var Measurement = require("../models/measurement");
 
 var router = express.Router();
 
-// Optional API key check for device-originated requests. If DEVICE_API_KEY is
-// unset, the check is skipped to preserve backward compatibility.
-function requireApiKey(req, res, next) {
-    const expected = process.env.DEVICE_API_KEY;
-    if (!expected) return next();
+async function requireApiKey(req, res, next) {
+    try {
+        const apiKey = req.headers["x-api-key"];
+        if (!apiKey) {
+            return res.status(401).json({ error: "Missing API key" });
+        }
 
-    const provided = req.headers["x-api-key"];
-    if (provided && provided === expected) {
-        return next();
+        const device = await Device.findOne({ apiKey });
+        if (!device) {
+            return res.status(401).json({ error: "Invalid API key" });
+        }
+
+        // attach device for later use
+        req.device = device;
+        next();
+    } catch (err) {
+        console.error("API key validation failed:", err);
+        res.status(500).json({ error: "API key validation error" });
     }
-
-    return res.status(401).json({ error: "Invalid or missing API key" });
 }
 
 router.use(requireApiKey);
@@ -22,6 +29,10 @@ router.use(requireApiKey);
 router.post("/", async function (req, res) {
     try {
         const { deviceId, heartRate, spo2 } = req.body;
+
+        if (deviceId !== req.device.deviceId) {
+            return res.status(403).json({ error: "Not allowed" });
+        }
 
         if (!deviceId || heartRate == null || spo2 == null) {
             return res.status(400).json({ error: "Missing fields" });
@@ -38,6 +49,10 @@ router.post("/", async function (req, res) {
 router.get("/:deviceId", async function (req, res) {
     try {
         const deviceId = req.params.deviceId;
+
+        if (deviceId !== req.device.deviceId) {
+            return res.status(403).json({ error: "Not allowed" });
+        }
 
         const list = await Measurement.find({ deviceId })
             .sort({ timestamp: -1 })

@@ -2,6 +2,7 @@ var express = require("express");
 var Device = require("../models/device");
 var User = require("../models/user");
 var jwt = require("jwt-simple");
+const crypto = require("crypto");
 
 var router = express.Router();
 var SECRET = "super-secret-key";
@@ -35,10 +36,13 @@ router.post("/register", async function (req, res) {
             return res.status(400).json({ error: "Device already registered" });
         }
 
+        const apiKey = crypto.randomBytes(32).toString("hex");
+
         const device = await Device.create({
             deviceId,
             nickname,
-            user: user._id
+            user: user._id,
+            apiKey
         });
 
         user.devices.push(device._id);
@@ -49,7 +53,8 @@ router.post("/register", async function (req, res) {
             device: {
                 id: device._id,
                 deviceId: device.deviceId,
-                nickname: device.nickname
+                nickname: device.nickname,
+                apiKey: device.apiKey
             }
         });
     } catch {
