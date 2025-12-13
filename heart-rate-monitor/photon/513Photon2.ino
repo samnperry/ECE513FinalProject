@@ -342,7 +342,7 @@ bool publishMeasurement(const MeasurementRecord &rec) {
             "\"deviceId\":\"%s\","
             "\"heartRate\":%d,"
             "\"spo2\":%d,"
-            "\"timestamp\":%lu,"
+            "\"timestamp\":%lu"
         "}",
         deviceId.c_str(),
         (int)rec.heartRate,

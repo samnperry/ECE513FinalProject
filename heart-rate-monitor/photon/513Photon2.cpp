@@ -2,7 +2,7 @@
 //       THIS IS A GENERATED FILE - DO NOT EDIT       //
 /******************************************************/
 
-#line 1 "/Users/sevengilbert/Desktop/ECE513FinalProject/heart-rate-monitor/photon/513Photon2.ino"
+#line 1 "/Users/samanthaperry/Documents/GitHub/ECE513FinalProject/heart-rate-monitor/photon/513Photon2.ino"
 /////////////////////////////////////////////////////
 // Connects Sensors to AWS through Particle Cloud. //
 /////////////////////////////////////////////////////
@@ -21,6 +21,7 @@ void onHookResponse(const char *event, const char *data);
 void onHookError(const char *event, const char *data);
 void setRgb(uint8_t r, uint8_t g, uint8_t b);
 void updateRgb(unsigned long now);
+void scheduleBacklogPause();
 bool isOnline();
 bool withinAllowedHours();
 uint32_t bestEffortTimestamp();
@@ -28,7 +29,7 @@ void resetAcquisitionBuffers();
 void updateMax30102();
 void setup();
 void loop();
-#line 9 "/Users/sevengilbert/Desktop/ECE513FinalProject/heart-rate-monitor/photon/513Photon2.ino"
+#line 9 "/Users/samanthaperry/Documents/GitHub/ECE513FinalProject/heart-rate-monitor/photon/513Photon2.ino"
 SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
 
 // |~~~~~~~~~~~~~~| Defaults / Requirements |~~~~~~~~~~~~~~|
@@ -36,7 +37,8 @@ const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL;  // default: 
 const unsigned long PROMPT_WINDOW_MS        = 5UL  * 60UL * 1000UL; // prompt window: 5 min
 const unsigned long LED_BLINK_MS            = 500;                  // blink speed
 const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
-const unsigned long ACK_TIMEOUT_MS          = 10UL * 1000UL;        // wait for webhook response
+const unsigned long ACK_TIMEOUT_MS          = 20UL * 1000UL;        // wait up to 20s for webhook response
+const unsigned long BACKLOG_FLUSH_DELAY_MS  = 20UL * 1000UL;        // stay idle 20s between backlog attempts
 
 const uint8_t ALLOWED_START_HOUR = 6;   // 6am
 const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
@@ -263,6 +265,12 @@ MeasurementRecord pending;              // Setup a possible recording
 bool pendingValid     = false;
 bool pendingFromQueue = false;
 
+unsigned long backlogNextAllowedMs = 0;
+
+void scheduleBacklogPause() {
+  backlogNextAllowedMs = millis() + BACKLOG_FLUSH_DELAY_MS;
+}
+
 bool isOnline() {
   // means we can publish + receive hook-response
   return WiFi.ready() && Particle.connected();
@@ -358,7 +366,7 @@ bool publishMeasurement(const MeasurementRecord &rec) {
             "\"deviceId\":\"%s\","
             "\"heartRate\":%d,"
             "\"spo2\":%d,"
-            "\"timestamp\":%lu,"
+            "\"timestamp\":%lu"
         "}",
         deviceId.c_str(),
         (int)rec.heartRate,
@@ -510,6 +518,7 @@ void loop() {
     case STATE_IDLE_WAIT: {
       // If we reconnect and have backlog, flush first
       if (isOnline() && queueCount() > 0) {
+        if (millis() < backlogNextAllowedMs) break;
         enterState(STATE_FLUSH_BACKLOG);
         break;
       }
@@ -709,9 +718,10 @@ void loop() {
         pendingValid = true;
         pendingFromQueue = true;
 
+        scheduleBacklogPause();
         enterState(STATE_SEND_PENDING);
         break;
-    }
+      }
 
     case STATE_FLASH_GREEN: {
       // Brief green flash after server-confirmed record
