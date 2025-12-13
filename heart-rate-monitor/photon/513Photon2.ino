@@ -5,11 +5,11 @@
 
 #include "Particle.h"
 #include "MAX30105.h"        // SparkFun-MAX3010x
-#include "spo2_algorithm.h"  // Same library
+#include "spo2_algorithm.h"  // Same library for sensor
 
 SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
 
-// -------------------- Defaults / Requirements --------------------
+// |~~~~~~~~~~~~~~| Defaults / Requirements |~~~~~~~~~~~~~~|
 const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL; // default: 30 min
 const unsigned long PROMPT_WINDOW_MS        = 5UL  * 60UL * 1000UL; // prompt window: 5 min
 const unsigned long LED_BLINK_MS            = 500;                  // blink speed
@@ -28,13 +28,13 @@ const char* MEAS_EVENT = "Photon2_SendEvent";
 // Backend API key requirement (put your real key here)
 const char* API_KEY = "REPLACE_WITH_REAL_API_KEY";
 
-// -------------------- D7 (optional debug LED) --------------------
+// |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
 const int LED_D7 = D7;
 
-// -------------------- Particle Vars --------------------
+// |~~~~~~~~~~~~~~| Particle Vars |~~~~~~~~~~~~~~|
 String deviceId;
 
-// -------------------- Sensor Vars --------------------
+// |~~~~~~~~~~~~~~| Sensor Vars |~~~~~~~~~~~~~~|
 MAX30105 particleSensor;
 
 static const int BUFFER_LENGTH = 100; // 4 seconds at 25 Hz
@@ -53,13 +53,13 @@ bool bufferFilled  = false;
 uint32_t lastIR  = 0;
 uint32_t lastRed = 0;
 
-// -------------------- Offline Queue in EEPROM --------------------
-// Stores up to ~24h worth at 30-min interval (48 samples). Capacity 64 gives margin.
+// |~~~~~~~~~~~~~~| Offline Queue in EEPROM |~~~~~~~~~~~~~~|
+// Stores up to ~24h worth at custom interval (Max 64 - should give enough head room)
 struct MeasurementRecord {
-  uint32_t timestamp;   // Unix seconds (best-effort)
+  uint32_t timestamp;   // Unix seconds 
   int16_t  heartRate;
   int16_t  spo2;
-  uint16_t reserved;    // alignment / future use
+  uint16_t reserved;    // for alignment
 };
 
 struct QueueHeader {
@@ -112,7 +112,7 @@ bool queuePopOldest() {
 bool queuePush(const MeasurementRecord &rec) {
   uint16_t writeIdx = (qh.head + qh.count) % QUEUE_CAPACITY;
 
-  // If full, overwrite oldest (advance head)
+  // If full, overwrite oldest and advance head
   if (qh.count == QUEUE_CAPACITY) {
     qh.head = (qh.head + 1) % QUEUE_CAPACITY;
     qh.count = QUEUE_CAPACITY - 1;
@@ -125,7 +125,7 @@ bool queuePush(const MeasurementRecord &rec) {
   return true;
 }
 
-// Best-effort prune: only when Time is valid.
+// Prune when time is valid
 void queuePruneOlderThan24h() {
   if (!Time.isValid()) return;
 
@@ -147,120 +147,121 @@ void queuePruneOlderThan24h() {
   }
 }
 
-// -------------------- Webhook ACK tracking --------------------
-// Webhook response events are typically:
-//   hook-response/<eventName>/...
-//   hook-error/<eventName>/...
+// |~~~~~~~~~~~~~~| Webhook ACK tracking |~~~~~~~~~~~~~~|
 volatile bool g_hookReceived = false;
 volatile bool g_hookSuccess  = false;
 
 void onHookResponse(const char *event, const char *data) {
-  (void)event; (void)data;
-  g_hookReceived = true;
-  g_hookSuccess  = true;
+    (void)event; (void)data;
+    g_hookReceived = true;
+    g_hookSuccess  = true;
 }
 
 void onHookError(const char *event, const char *data) {
-  (void)event; (void)data;
-  g_hookReceived = true;
-  g_hookSuccess  = false;
+    (void)event; (void)data;
+    g_hookReceived = true;
+    g_hookSuccess  = false;
 }
 
-// -------------------- LED Helpers (non-blocking) --------------------
+// |~~~~~~~~~~~~~~| Non-blocking LED Helpers |~~~~~~~~~~~~~~|
 enum RgbMode : uint8_t {
-  RGB_OFF,
-  RGB_SOLID_ORANGE,
-  RGB_SOLID_RED,
-  RGB_BLINK_BLUE,
-  RGB_SOLID_GREEN,
-  RGB_SOLID_YELLOW
+    RGB_OFF,
+    RGB_SOLID_ORANGE,
+    RGB_SOLID_RED,
+    RGB_BLINK_BLUE,
+    RGB_SOLID_GREEN,
+    RGB_SOLID_YELLOW
 };
 
 RgbMode rgbMode = RGB_OFF;
 bool rgbBlinkOn = false;
 unsigned long lastRgbToggleMs = 0;
 
+// Set RGB Color
 void setRgb(uint8_t r, uint8_t g, uint8_t b) {
-  RGB.color(r, g, b);
+    RGB.color(r, g, b);
 }
 
+// Setup some stock modes for later
 void setRgbMode(RgbMode m) {
   rgbMode = m;
   rgbBlinkOn = false;
   lastRgbToggleMs = millis();
 
-  switch (rgbMode) {
-    case RGB_OFF:          setRgb(0, 0, 0); break;
-    case RGB_SOLID_ORANGE: setRgb(255, 165, 0); break;
-    case RGB_SOLID_RED:    setRgb(255, 0, 0); break;
-    case RGB_SOLID_GREEN:  setRgb(0, 255, 0); break;
-    case RGB_SOLID_YELLOW: setRgb(255, 255, 0); break;
-    case RGB_BLINK_BLUE:   setRgb(0, 0, 255); rgbBlinkOn = true; break;
-  }
-}
-
-void updateRgb(unsigned long now) {
-  if (rgbMode == RGB_BLINK_BLUE) {
-    if (now - lastRgbToggleMs >= LED_BLINK_MS) {
-      lastRgbToggleMs = now;
-      rgbBlinkOn = !rgbBlinkOn;
-      if (rgbBlinkOn) setRgb(0, 0, 255);
-      else            setRgb(0, 0, 0);
+    switch (rgbMode) {
+        case RGB_OFF:          setRgb(0, 0, 0); break;
+        case RGB_SOLID_ORANGE: setRgb(255, 165, 0); break;
+        case RGB_SOLID_RED:    setRgb(255, 0, 0); break;
+        case RGB_SOLID_GREEN:  setRgb(0, 255, 0); break;
+        case RGB_SOLID_YELLOW: setRgb(255, 255, 0); break;
+        case RGB_BLINK_BLUE:   setRgb(0, 0, 255); rgbBlinkOn = true; break;
     }
-  }
 }
 
-// -------------------- State Machine --------------------
+// For blue flashing
+void updateRgb(unsigned long now) {
+    if (rgbMode == RGB_BLINK_BLUE) {
+        if (now - lastRgbToggleMs >= LED_BLINK_MS) {
+            lastRgbToggleMs = now;
+            rgbBlinkOn = !rgbBlinkOn;
+            if (rgbBlinkOn) setRgb(0, 0, 255);
+            else            setRgb(0, 0, 0);
+        }
+    }
+}
+
+// |~~~~~~~~~~~~~~| State Machine |~~~~~~~~~~~~~~|
 enum AppState : uint8_t {
-  STATE_BOOT = 0,
-  STATE_IDLE_WAIT,
-  STATE_PROMPT_USER,
-  STATE_ACQUIRE,
-  STATE_MEASUREMENT_READY,
-  STATE_SEND_PENDING,
-  STATE_WAIT_SERVER_ACK,
-  STATE_STORE_OFFLINE,
-  STATE_FLUSH_BACKLOG,
-  STATE_FLASH_GREEN,
-  STATE_FLASH_YELLOW,
-  STATE_ERROR_FATAL
+    STATE_BOOT = 0,
+    STATE_IDLE_WAIT,
+    STATE_PROMPT_USER,
+    STATE_ACQUIRE,
+    STATE_MEASUREMENT_READY,
+    STATE_SEND_PENDING,
+    STATE_WAIT_SERVER_ACK,
+    STATE_STORE_OFFLINE,
+    STATE_FLUSH_BACKLOG,
+    STATE_FLASH_GREEN,
+    STATE_FLASH_YELLOW,
+    STATE_ERROR_FATAL
 };
 
-AppState state = STATE_BOOT;
+AppState state = STATE_BOOT;            // Init
 unsigned long stateEnterMs = 0;
 
 unsigned long nextPromptMs      = 0;
-unsigned long promptSessionMs   = 0;  // start of 5-min prompt window
+unsigned long promptSessionMs   = 0;    // start of 5-min prompt window
 unsigned long sendStartMs       = 0;
 unsigned long flashEndMs        = 0;
 
-uint8_t stableCount = 0;
+uint8_t stableCount = 0;                // For reading valid sensor values
 
-MeasurementRecord pending;
+MeasurementRecord pending;              // Setup a possible recording
 bool pendingValid     = false;
 bool pendingFromQueue = false;
 
 bool isOnline() {
-  // "connected to Wi-Fi" in practice means we can publish + receive hook-response
+  // means we can publish + receive hook-response
   return WiFi.ready() && Particle.connected();
 }
 
 bool withinAllowedHours() {
-  if (!Time.isValid()) return true; // best-effort when time unknown
+  if (!Time.isValid()) return true; // in case time unknown
   int h = Time.hour();
   if (ALLOWED_START_HOUR < ALLOWED_END_HOUR) {
     return (h >= ALLOWED_START_HOUR && h < ALLOWED_END_HOUR);
   }
-  // wraparound case (not used here, but safe)
+  // wraparound case 
   return (h >= ALLOWED_START_HOUR || h < ALLOWED_END_HOUR);
 }
 
 uint32_t bestEffortTimestamp() {
-  // If RTC synced at least once, Time.now() stays usable even if Wi-Fi drops.
+  // If RTC synced at least once, Time.now() stays usable when Wi-Fi drops
   if (Time.isValid()) return Time.now();
-  return 0; // backend can also timestamp on receipt
+  return 0;
 }
 
+// Reset the sensor value storage to help increase accuracy 
 void resetAcquisitionBuffers() {
   bufferIndex  = 0;
   bufferFilled = false;
@@ -269,217 +270,220 @@ void resetAcquisitionBuffers() {
   validSPO2 = 0;
   validHeartRate = 0;
 
-  // Clear FIFO to start clean
+  // Start clean
   particleSensor.clearFIFO();
 }
 
-// Reads one sample when it's time; updates lastIR/lastRed and runs algorithm when bufferFilled.
+// Reads one sample
 void updateMax30102() {
-  unsigned long now = millis();
-  if (now - lastSampleTime < SAMPLE_INTERVAL_MS) return;
-  lastSampleTime = now;
+    unsigned long now = millis();
+    if (now - lastSampleTime < SAMPLE_INTERVAL_MS) return;
+    lastSampleTime = now;
 
-  if (!particleSensor.available()) {
-    particleSensor.check();
-    if (!particleSensor.available()) return;
-  }
+    if (!particleSensor.available()) {
+        particleSensor.check();
+        if (!particleSensor.available()) return;
+    }
 
-  lastRed = particleSensor.getRed();
-  lastIR  = particleSensor.getIR();
+    // updates lastIR/lastRed and runs algorithm when bufferFilled.
+    lastRed = particleSensor.getRed();
+    lastIR  = particleSensor.getIR();
 
-  redBuffer[bufferIndex] = lastRed;
-  irBuffer[bufferIndex]  = lastIR;
+    redBuffer[bufferIndex] = lastRed;
+    irBuffer[bufferIndex]  = lastIR;
 
-  particleSensor.nextSample();
+    particleSensor.nextSample();
 
-  bufferIndex++;
-  if (bufferIndex >= BUFFER_LENGTH) {
-    bufferIndex = 0;
-    bufferFilled = true;
-  }
+    bufferIndex++;
+    if (bufferIndex >= BUFFER_LENGTH) {
+        bufferIndex = 0;
+        bufferFilled = true;
+    }
 
-  if (bufferFilled) {
-    maxim_heart_rate_and_oxygen_saturation(
-      irBuffer, BUFFER_LENGTH,
-      redBuffer,
-      &spo2, &validSPO2,
-      &heartRate, &validHeartRate
-    );
-  }
+    if (bufferFilled) {
+        maxim_heart_rate_and_oxygen_saturation(
+            irBuffer, BUFFER_LENGTH,
+            redBuffer,
+            &spo2, &validSPO2,
+            &heartRate, &validHeartRate
+        );
+    }
 
-    // Debug print (throttled)
+    // Debug printing 
     static unsigned long lastPrintMs = 0;
     if (lastPrintMs == 0) lastPrintMs = now;
 
     if (now - lastPrintMs >= 500) { // ~2 prints/sec
-    lastPrintMs = now;
+        lastPrintMs = now;
 
-    Serial.printf(
-        "[MAX30102] IR=%lu  RED=%lu  BPM=%d (v=%d)  SpO2=%.d%% (v=%d)  bufFilled=%d  state=%d\n",
-        (unsigned long)lastIR,
-        (unsigned long)lastRed,
-        (int)heartRate, (int)validHeartRate,
-        (int)spo2,      (int)validSPO2,
-        (int)bufferFilled,
-        (int)state
-    );
-
-  }
+        Serial.printf(
+            "[MAX30102] IR=%lu  RED=%lu  BPM=%d (v=%d)  SpO2=%.d%% (v=%d)  bufFilled=%d  state=%d\n",
+            (unsigned long)lastIR,
+            (unsigned long)lastRed,
+            (int)heartRate, (int)validHeartRate,
+            (int)spo2,      (int)validSPO2,
+            (int)bufferFilled,
+            (int)state
+        );
+    }
 }
 
 bool publishMeasurement(const MeasurementRecord &rec) {
-  // Build JSON payload
-  String payload = String::format(
-    "{"
-      "\"deviceId\":\"%s\","
-      "\"heartRate\":%d,"
-      "\"spo2\":%d,"
-      "\"timestamp\":%lu,"
-      "\"apiKey\":\"%s\""
-    "}",
-    deviceId.c_str(),
-    (int)rec.heartRate,
-    (int)rec.spo2,
-    (unsigned long)rec.timestamp,
-    API_KEY
-  );
+    // Build JSON payload
+        String payload = String::format(
+        "{"
+            "\"deviceId\":\"%s\","
+            "\"heartRate\":%d,"
+            "\"spo2\":%d,"
+            "\"timestamp\":%lu,"
+            "\"apiKey\":\"%s\""
+        "}",
+        deviceId.c_str(),
+        (int)rec.heartRate,
+        (int)rec.spo2,
+        (unsigned long)rec.timestamp,
+        API_KEY
+    );
 
-  return Particle.publish(MEAS_EVENT, payload, PRIVATE);
+    return Particle.publish(MEAS_EVENT, payload, PRIVATE);
 }
 
+// Code to be executed on entering a state
 void enterState(AppState s) {
-  state = s;
-  stateEnterMs = millis();
+    state = s;
+    stateEnterMs = millis();
 
-  switch (state) {
+    switch (state) {
     case STATE_IDLE_WAIT:
-      Serial.println("\n[STATE] STATE_IDLE_WAIT");
-      setRgbMode(RGB_OFF);
-      digitalWrite(LED_D7, LOW);
-      break;
+        Serial.println("\n[STATE] STATE_IDLE_WAIT");
+        setRgbMode(RGB_OFF);
+        digitalWrite(LED_D7, LOW);
+        break;
 
     case STATE_PROMPT_USER:
-      Serial.println("\n[STATE] STATE_PROMPT_USER");
-      setRgbMode(RGB_BLINK_BLUE);
-      digitalWrite(LED_D7, LOW);
-      break;
+        Serial.println("\n[STATE] STATE_PROMPT_USER");
+        setRgbMode(RGB_BLINK_BLUE);
+        digitalWrite(LED_D7, LOW);
+        break;
 
     case STATE_ACQUIRE:
-      Serial.println("\n[STATE] STATE_ACQUIRE");
-      setRgbMode(RGB_SOLID_ORANGE);
-      digitalWrite(LED_D7, HIGH);
-      break;
+        Serial.println("\n[STATE] STATE_ACQUIRE");
+        setRgbMode(RGB_SOLID_ORANGE);
+        digitalWrite(LED_D7, HIGH);
+        break;
 
     case STATE_MEASUREMENT_READY:
-      Serial.println("\n[STATE] STATE_MEASUREMENT_READY");
-      break;
+        Serial.println("\n[STATE] STATE_MEASUREMENT_READY");
+        break;
 
     case STATE_SEND_PENDING:
-      Serial.println("\n[STATE] STATE_SEND_PENDING");
-      break;
+        Serial.println("\n[STATE] STATE_SEND_PENDING");
+        break;
 
     case STATE_WAIT_SERVER_ACK:
-      Serial.println("\n[STATE] STATE_WAIT_SERVER_ACK");
-      setRgbMode(RGB_SOLID_ORANGE);
-      break;
+        Serial.println("\n[STATE] STATE_WAIT_SERVER_ACK");
+        setRgbMode(RGB_SOLID_ORANGE);
+        break;
 
     case STATE_STORE_OFFLINE:
-      Serial.println("\n[STATE] STATE_STORE_OFFLINE");
-      break;
+        Serial.println("\n[STATE] STATE_STORE_OFFLINE");
+        break;
 
     case STATE_FLUSH_BACKLOG:
-      Serial.println("\n[STATE] STATE_FLUSH_BACKLOG");
-      break;
+        Serial.println("\n[STATE] STATE_FLUSH_BACKLOG");
+        break;
 
     case STATE_FLASH_GREEN:
-      Serial.println("\n[STATE] STATE_FLASH_GREEN");
-      setRgbMode(RGB_SOLID_GREEN);
-      flashEndMs = millis() + 300;
-      break;
+        Serial.println("\n[STATE] STATE_FLASH_GREEN");
+        setRgbMode(RGB_SOLID_GREEN);
+        flashEndMs = millis() + 300;
+        break;
 
     case STATE_FLASH_YELLOW:
-      Serial.println("\n[STATE] STATE_FLASH_YELLOW");
-      setRgbMode(RGB_SOLID_YELLOW);
-      flashEndMs = millis() + 300;
-      break;
+        Serial.println("\n[STATE] STATE_FLASH_YELLOW");
+        setRgbMode(RGB_SOLID_YELLOW);
+        flashEndMs = millis() + 300;
+        break;
 
     case STATE_ERROR_FATAL:
-      Serial.println("\n[STATE] STATE_ERROR_FATAL");
-      setRgbMode(RGB_SOLID_RED);
-      break;
+        Serial.println("\n[STATE] STATE_ERROR_FATAL");
+        setRgbMode(RGB_SOLID_RED);
+        break;
 
     default:
-      Serial.println("\n[STATE] STATE_UNKNOWN");
-      break;
-  }
+        Serial.println("\n[STATE] STATE_UNKNOWN");
+        break;
+    }
 }
 
 
-// -------------------- setup / loop --------------------
+// |~~~~~~~~~~~~~~| setup / loop |~~~~~~~~~~~~~~|
 void setup() {
-  pinMode(LED_D7, OUTPUT);
-  digitalWrite(LED_D7, LOW);
+    pinMode(LED_D7, OUTPUT);
+    digitalWrite(LED_D7, LOW);
 
-  Serial.begin(115200);
-  waitFor(Serial.isConnected, 3000);
+    Serial.begin(115200);
+    waitFor(Serial.isConnected, 3000);
 
-  deviceId = System.deviceID();
-  Serial.println("Device ID: " + deviceId);
+    deviceId = System.deviceID();
+    Serial.println("Device ID: " + deviceId);
 
-  RGB.control(true);
-  setRgbMode(RGB_OFF);
+    RGB.control(true);
+    setRgbMode(RGB_OFF);
 
-  // Offline queue init
-  queueLoadOrInit();
+    // Offline queue init
+    queueLoadOrInit();
 
-  // Subscribe to webhook response/error for ACK behavior
-  Particle.subscribe(String::format("hook-response/%s", MEAS_EVENT), onHookResponse, MY_DEVICES);
-  Particle.subscribe(String::format("hook-error/%s",    MEAS_EVENT), onHookError,    MY_DEVICES);
+    // Subscribe to webhook response/error for ACK behavior
+    Particle.subscribe(String::format("hook-response/%s", MEAS_EVENT), onHookResponse, MY_DEVICES);
+    Particle.subscribe(String::format("hook-error/%s",    MEAS_EVENT), onHookError,    MY_DEVICES);
 
-  // Sensor init
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println("MAX30102 not found. Check wiring/power.");
-    enterState(STATE_ERROR_FATAL);
-    return;
-  }
+    // Sensor init
+    if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+        Serial.println("MAX30102 not found. Check wiring/power.");
+        enterState(STATE_ERROR_FATAL);
+        return;
+    }
 
-  // Sensor config (your existing settings)
-  byte ledBrightness = 60;
-  byte sampleAverage = 4;
-  byte ledMode       = 2;   // Red + IR
-  byte sampleRate    = 25;
-  int  pulseWidth    = 411;
-  int  adcRange      = 4096;
+    // Sensor config
+    byte ledBrightness = 60;
+    byte sampleAverage = 4;
+    byte ledMode       = 2;   // Red + IR
+    byte sampleRate    = 25;
+    int  pulseWidth    = 411;
+    int  adcRange      = 4096;
 
-  particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
-  particleSensor.setPulseAmplitudeRed(0x0A);
-  particleSensor.setPulseAmplitudeIR(0x0A);
-  particleSensor.setPulseAmplitudeGreen(0);
+    particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange);
+    particleSensor.setPulseAmplitudeRed(0x0A);
+    particleSensor.setPulseAmplitudeIR(0x0A);
+    particleSensor.setPulseAmplitudeGreen(0);
 
-  Serial.println("MAX30102 initialized.");
+    Serial.println("MAX30102 initialized.");
 
-  // Start schedule: prompt soon on boot (change to MEASUREMENT_INTERVAL_MS if you want strict cadence)
-  nextPromptMs = millis() + 2000;
+    // Try prompt soon after boot 
+    nextPromptMs = millis() + 2000;
 
-  enterState(STATE_IDLE_WAIT);
+    enterState(STATE_IDLE_WAIT);
 }
 
 void loop() {
   const unsigned long now = millis();
 
+  // Just if the sensor is not found
   if (state == STATE_ERROR_FATAL) {
-    // Non-blocking “fatal” indicator (blink D7 while RGB solid red)
+    // Non-blocking indicator - blink D7 with RGB solid red
     if ((now / 250) % 2 == 0) digitalWrite(LED_D7, HIGH);
     else                      digitalWrite(LED_D7, LOW);
     return;
   }
 
-  // Always keep LED patterns updated
+  // Keep LED patterns updated
   updateRgb(now);
 
-  // Best-effort prune (only when RTC valid)
+  // Prune when RTC valid
   queuePruneOlderThan24h();
 
+  // State Machine Central
   switch (state) {
 
     case STATE_IDLE_WAIT: {
@@ -489,9 +493,9 @@ void loop() {
         break;
       }
 
-      // Only prompt within allowed hours
+      // Prompt within allowed hours, else stay idle 
       if (!withinAllowedHours()) {
-        // Stay idle; when hour becomes valid again, we'll prompt if nextPromptMs has passed.
+        // Test the time again
         break;
       }
 
@@ -506,7 +510,7 @@ void loop() {
     }
 
     case STATE_PROMPT_USER: {
-      // Prompt window expired?
+      // If a measure wasnt taken within window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
         // Stop prompting until next interval
         nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
@@ -526,16 +530,17 @@ void loop() {
     }
 
     case STATE_ACQUIRE: {
-      // Still bounded by the original prompt session window
+      // Keep an eye on the measure window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
         nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
         enterState(STATE_IDLE_WAIT);
         break;
       }
 
+      // Sample 
       updateMax30102();
 
-      // If finger removed, go back to prompt (still within the same 5-min window)
+      // If finger removed, go back to prompt
       if (lastIR < (FINGER_IR_THRESHOLD / 2)) {
         enterState(STATE_PROMPT_USER);
         break;
@@ -544,12 +549,11 @@ void loop() {
       // Track stability once algorithm is running
       if (bufferFilled && validHeartRate == 1 && validSPO2 == 1) {
         stableCount++;
-      } else {
-        stableCount = 0;
-      }
+      } 
+      else stableCount = 0;
 
       if (stableCount >= STABLE_REQUIRED) {
-        // Latch a single “measurement taken”
+        // Latch a single measurement taken after data looks good
         pending.timestamp = bestEffortTimestamp();
         pending.heartRate = (int16_t)heartRate;
         pending.spo2      = (int16_t)spo2;
@@ -562,125 +566,130 @@ void loop() {
     }
 
     case STATE_MEASUREMENT_READY: {
-      if (!pendingValid) {
-        enterState(STATE_IDLE_WAIT);
-        break;
-      }
+        // Make sure data still looks good, retry if nar
+        if (!pendingValid) {
+            enterState(STATE_IDLE_WAIT);
+            break;
+        }
 
-      // Branch on connectivity:
-      // - Online: send now, but only flash GREEN after server ACK
-      // - Offline: flash YELLOW briefly + store locally (<=24h) and send later
+      // Branch based on connectivity:
+      // - Online: send now, then flash GREEN after server ACK
+      // - Offline: flash YELLOW + store locally if fail to upload at any point
       if (isOnline()) enterState(STATE_SEND_PENDING);
       else           enterState(STATE_STORE_OFFLINE);
       break;
     }
 
     case STATE_SEND_PENDING: {
-      if (!pendingValid) {
-        enterState(STATE_IDLE_WAIT);
+        // Make sure data still looks good, retry if nar
+        if (!pendingValid) {
+            enterState(STATE_IDLE_WAIT);
+            break;
+        }
+
+        if (!isOnline()) {
+            // Fell offline before sending
+            enterState(STATE_STORE_OFFLINE);
+            break;
+        }
+
+        // Reset ACK flags and publish
+        g_hookReceived = false;
+        g_hookSuccess  = false;
+
+        bool ok = publishMeasurement(pending);
+        if (!ok) {
+            // Publish failed, do offline storage
+            enterState(STATE_STORE_OFFLINE);
+            break;
+        }
+
+        Serial.println("Published measurement event (waiting for server ACK)...");
+        sendStartMs = now;
+        enterState(STATE_WAIT_SERVER_ACK);
         break;
-      }
-
-      if (!isOnline()) {
-        // Fell offline before sending
-        enterState(STATE_STORE_OFFLINE);
-        break;
-      }
-
-      // Reset ACK flags and publish
-      g_hookReceived = false;
-      g_hookSuccess  = false;
-
-      bool ok = publishMeasurement(pending);
-      if (!ok) {
-        // Publish couldn’t be queued -> treat like offline storage
-        enterState(STATE_STORE_OFFLINE);
-        break;
-      }
-
-      Serial.println("Published measurement event (waiting for server ACK)...");
-      sendStartMs = now;
-      enterState(STATE_WAIT_SERVER_ACK);
-      break;
     }
 
     case STATE_WAIT_SERVER_ACK: {
       // Wait for hook-response/hook-error. GREEN only on success.
       if (g_hookReceived) {
         if (g_hookSuccess) {
-          Serial.println("Server ACK received (DB recorded).");
+            Serial.println("Server ACK received (DB recorded).");
 
-          // If this record came from backlog, remove it now that it’s confirmed.
-          if (pendingFromQueue) {
-            queuePopOldest();
-          }
+            // If it came from backlog, pop it now that it’s sent
+            if (pendingFromQueue) {
+                queuePopOldest();
+            }
 
-          // Schedule next measurement prompt interval from now
-          nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
-
-          enterState(STATE_FLASH_GREEN);
-        } else {
-          Serial.println("Server returned hook-error.");
-          // If this was a new measurement, store it offline.
-          // If it was from the queue, keep it (don’t pop) and stop flushing for now.
-          if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
-          else {
+            // Schedule next prompt interval
             nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
-            enterState(STATE_IDLE_WAIT);
-          }
+
+            enterState(STATE_FLASH_GREEN);
+        } else {
+            Serial.println("Server returned hook-error.");
+            // If this was a new measurement, store it offline.
+            // If it was from the queue, keep it
+            if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
+            else {
+                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                enterState(STATE_IDLE_WAIT);
+            }
         }
         break;
       }
 
       // Timeout waiting for ACK
       if (now - sendStartMs >= ACK_TIMEOUT_MS) {
-        Serial.println("ACK timeout.");
-        if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
-        else {
-          nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
-          enterState(STATE_IDLE_WAIT);
-        }
+            Serial.println("ACK timeout.");
+            if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
+            else {
+                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                enterState(STATE_IDLE_WAIT);
+            }
       }
       break;
     }
 
     case STATE_STORE_OFFLINE: {
-      // REQUIREMENT: if offline -> briefly flash YELLOW + store locally up to 24 hours
-      if (pendingValid) {
-        queuePush(pending);
-        Serial.println("Stored measurement offline in EEPROM queue.");
-      }
+      // If offline flash yellow and store locally
+        if (pendingValid) {
+            queuePush(pending);
+            Serial.println("Stored measurement offline in EEPROM queue.");
+        }
 
-      // Schedule next measurement prompt interval from now
-      nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
-
-      enterState(STATE_FLASH_YELLOW);
-      break;
+        // Schedule next measurement prompt interval from now
+        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        // Flash before returning to wait
+        enterState(STATE_FLASH_YELLOW);
+        break;
     }
 
     case STATE_FLUSH_BACKLOG: {
-      if (!isOnline()) {
-        enterState(STATE_IDLE_WAIT);
+        // Make sure we are still online
+        if (!isOnline()) {
+            enterState(STATE_IDLE_WAIT);
+            break;
+        }
+
+        // Make sure there is something in queue
+        if (queueCount() == 0) {
+            enterState(STATE_IDLE_WAIT);
+            break;
+        }
+
+        // Get and auth a measurement
+        MeasurementRecord r;
+        if (!queuePeekOldest(r)) {
+            enterState(STATE_IDLE_WAIT);
+            break;
+        }
+
+        pending = r;
+        pendingValid = true;
+        pendingFromQueue = true;
+
+        enterState(STATE_SEND_PENDING);
         break;
-      }
-
-      if (queueCount() == 0) {
-        enterState(STATE_IDLE_WAIT);
-        break;
-      }
-
-      MeasurementRecord r;
-      if (!queuePeekOldest(r)) {
-        enterState(STATE_IDLE_WAIT);
-        break;
-      }
-
-      pending = r;
-      pendingValid = true;
-      pendingFromQueue = true;
-
-      enterState(STATE_SEND_PENDING);
-      break;
     }
 
     case STATE_FLASH_GREEN: {
