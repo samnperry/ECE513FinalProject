@@ -5,7 +5,7 @@ import Login from "./components/login/Login";
 import Signup from "./components/signup/Signup";
 import DeviceRegister from "./components/deviceRegister/DeviceRegister";
 import { Dashboard } from "./components/dashboard/Dashboard";
-import HeaderBar from "./components/headerbar/HeaderBar";
+import HeaderBar from "./components/headerBar/HeaderBar";
 import PhysicianDashboard from "./components/physicianDashboard/physicianDashboard";
 import AssignPhysician from "./components/assignPhysician/assignPhysician";
 import PhysicianPatientDashboard from "./components/physicianPatientsDashboard/physicianPatientsDashboard";
