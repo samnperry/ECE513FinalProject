@@ -220,6 +220,14 @@ export function AccountPage() {
 
         <div className="card">
           <h2>Devices</h2>
+          {devices.length > 0 && (
+            <p className="muted" style={{ marginTop: 6 }}>
+              <strong style={{ fontWeight: 700 }}>Linked devices:</strong>{" "}
+              <span style={{ fontWeight: 600 }}>
+                {devices.map((d) => `${d.deviceId}${d.nickname ? ` (${d.nickname})` : ""}`).join(", ")}
+              </span>
+            </p>
+          )}
           <p className="muted">Add/remove linked devices and set nicknames.</p>
           <div className="form-actions" style={{ marginTop: 8 }}>
             <input
@@ -260,12 +268,6 @@ export function AccountPage() {
           <p className="muted" style={{ marginTop: 6 }}>
             Note: removal expects the device record ID (from the database). Registering uses the public device ID.
           </p>
-          {devices.length > 0 && (
-            <p className="muted" style={{ marginTop: 6 }}>
-              Linked devices:{" "}
-              {devices.map((d) => `${d.deviceId}${d.nickname ? ` (${d.nickname})` : ""}`).join(", ")}
-            </p>
-          )}
         </div>
 
         <div className="card">
