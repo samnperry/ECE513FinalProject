@@ -1,13 +1,13 @@
 var express = require("express");
 var Measurement = require("../models/measurement");
-
+var Device = require("../models/device");
 var router = express.Router();
 
 async function requireApiKey(req, res, next) {
     try {
         const apiKey = req.headers["x-api-key"];
         if (!apiKey) {
-            return res.status(401).json({ error: "Missing API key" });
+            return res.status(401).json({ error: "Missing API key in 'x-api-key' header" });
         }
 
         const device = await Device.findOne({ apiKey });
@@ -15,7 +15,12 @@ async function requireApiKey(req, res, next) {
             return res.status(401).json({ error: "Invalid API key" });
         }
 
-        // attach device for later use
+        if (req.body.deviceId && req.body.deviceId !== device.deviceId) {
+            return res.status(403).json({ 
+                error: `Device ID in request does not match API key. Expected: ${device.deviceId}` 
+            });
+        }
+
         req.device = device;
         next();
     } catch (err) {
@@ -31,7 +36,7 @@ router.post("/", async function (req, res) {
         const { deviceId, heartRate, spo2 } = req.body;
 
         if (!deviceId || heartRate == null || spo2 == null) {
-            return res.status(400).json({ error: "Missing fields" });
+            return res.status(400).json({ error: "Missing required fields" });
         }
 
         const m = await Measurement.create({ deviceId, heartRate, spo2 });
@@ -47,7 +52,7 @@ router.get("/:deviceId", async function (req, res) {
         const deviceId = req.params.deviceId;
 
         if (deviceId !== req.device.deviceId) {
-            return res.status(403).json({ error: "Not allowed" });
+            return res.status(403).json({ error: "Device ID mismatch" });
         }
 
         const list = await Measurement.find({ deviceId })

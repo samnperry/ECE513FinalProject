@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import AdjustPatientFrequency from "../adjustPatientFrequency/adjustPatientFrequency";
 
 interface DeviceSummary {
-  device: { deviceId: string };
+  device: { deviceId: string; nickname?: string; measurementFrequencySeconds?: number };
   latest: { bpm: number; timestamp: string } | null;
 }
 
@@ -45,10 +46,16 @@ const PatientSummary: React.FC = () => {
   return (
     <div>
       <h3>{data.patient.email} - Device Summary</h3>
-      <ul>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {data.summaries.map((s, idx) => (
-          <li key={idx}>
-            Device: {s.device.deviceId} | Latest: {s.latest ? `${s.latest.bpm} bpm at ${new Date(s.latest.timestamp).toLocaleTimeString()}` : "No data"}
+          <li key={idx} style={{ padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
+            <div>
+              <div>
+                <strong>Patient device:</strong> {s.device.deviceId} | Latest:{" "}
+                {s.latest ? `${s.latest.bpm} bpm at ${new Date(s.latest.timestamp).toLocaleTimeString()}` : "No data"}
+              </div>
+              <AdjustPatientFrequency deviceId={s.device.deviceId} />
+            </div>
           </li>
         ))}
       </ul>

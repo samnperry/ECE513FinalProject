@@ -88,6 +88,7 @@ function App() {
           >
             {/* Nested physician routes */}
             <Route
+              index
               path="patients"
               element={
                 <RequireAuth>
