@@ -5,6 +5,7 @@
 #include "Particle.h"
 #include "MAX30105.h"        // SparkFun-MAX3010x
 #include "spo2_algorithm.h"  // Same library for sensor
+#include "HttpClient.h"
 
 SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
 
@@ -27,12 +28,21 @@ const char* MEAS_EVENT = "Photon2_SendEvent";
 
 // Backend API key requirement
 const char* API_KEY = "3cf562803c98eee6f2df540bdc3b45a61e2b93200790ca78dbbfe4c3ce47a38c";
+// Backend host/port for config fetch (HTTP). Example: "sfwe513.publicvm.com", port 80.
+const char* API_HOST = "sfwe513.publicvm.com";
+const int   API_PORT = 80;
 
 // |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
 const int LED_D7 = D7;
 
 // |~~~~~~~~~~~~~~| Particle Vars |~~~~~~~~~~~~~~|
 String deviceId;
+unsigned long measurementIntervalMs = MEASUREMENT_INTERVAL_MS; // updated via server config
+
+// |~~~~~~~~~~~~~~| HTTP Client for config fetch |~~~~~~~~~~~~~~|
+HttpClient http;
+http_request_t request;
+http_response_t response;
 
 // |~~~~~~~~~~~~~~| Sensor Vars |~~~~~~~~~~~~~~|
 MAX30105 particleSensor;
@@ -268,6 +278,45 @@ uint32_t bestEffortTimestamp() {
   return 0;
 }
 
+int parseFrequencySeconds(const String &body) {
+  int idx = body.indexOf("measurementFrequencySeconds");
+  if (idx < 0) return -1;
+  idx = body.indexOf(":", idx);
+  if (idx < 0) return -1;
+  idx++;
+  while (idx < (int)body.length() && !isDigit(body[idx])) idx++;
+  int start = idx;
+  while (idx < (int)body.length() && isDigit(body[idx])) idx++;
+  if (start >= (int)body.length()) return -1;
+  return body.substring(start, idx).toInt();
+}
+
+void fetchMeasurementFrequency() {
+  request.hostname = API_HOST;
+  request.port = API_PORT;
+  request.path = String::format("/api/device/config/%s", deviceId.c_str());
+
+  http_header_t headers[] = {
+    { "Content-Type", "application/json" },
+    { "x-api-key", API_KEY },
+    { "User-Agent", "Photon2" },
+    { NULL, NULL }
+  };
+
+  response.body = "";
+  int status = http.get(request, response, headers);
+  if (status == 0 && response.status == 200) {
+    int seconds = parseFrequencySeconds(response.body);
+    if (seconds > 0) {
+      measurementIntervalMs = (unsigned long)seconds * 1000UL;
+      Serial.printlnf("Updated measurement interval to %d seconds", seconds);
+      nextPromptMs = millis() + measurementIntervalMs;
+    }
+  } else {
+    Serial.printlnf("Config fetch failed (status=%d http=%d)", status, response.status);
+  }
+}
+
 // Reset the sensor value storage to help increase accuracy 
 void resetAcquisitionBuffers() {
   bufferIndex  = 0;
@@ -465,7 +514,8 @@ void setup() {
 
     Serial.println("MAX30102 initialized.");
 
-    // Try prompt soon after boot 
+    // Pull the current frequency override (physician/patient) and start prompt soon after boot
+    fetchMeasurementFrequency();
     nextPromptMs = millis() + 2000;
 
     enterState(STATE_IDLE_WAIT);
@@ -519,7 +569,7 @@ void loop() {
       // If a measure wasnt taken within window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
         // Stop prompting until next interval
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         enterState(STATE_IDLE_WAIT);
         break;
       }
@@ -538,7 +588,7 @@ void loop() {
     case STATE_ACQUIRE: {
       // Keep an eye on the measure window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         enterState(STATE_IDLE_WAIT);
         break;
       }
@@ -627,8 +677,11 @@ void loop() {
                 queuePopOldest();
             }
 
+            // Refresh cadence in case physician override changed
+            fetchMeasurementFrequency();
+
             // Schedule next prompt interval
-            nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+            nextPromptMs = now + measurementIntervalMs;
 
             enterState(STATE_FLASH_GREEN);
         } else {
@@ -637,7 +690,7 @@ void loop() {
             // If it was from the queue, keep it
             if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
             else {
-                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                nextPromptMs = now + measurementIntervalMs;
                 enterState(STATE_IDLE_WAIT);
             }
         }
@@ -649,7 +702,7 @@ void loop() {
             Serial.println("ACK timeout.");
             if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
             else {
-                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                nextPromptMs = now + measurementIntervalMs;
                 enterState(STATE_IDLE_WAIT);
             }
       }
@@ -664,7 +717,7 @@ void loop() {
         }
 
         // Schedule next measurement prompt interval from now
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         // Flash before returning to wait
         enterState(STATE_FLASH_YELLOW);
         break;
