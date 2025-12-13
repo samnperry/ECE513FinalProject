@@ -1,4 +1,3 @@
-// server/models/heartData.js
 const db = require("mongoose");
 
 const HeartDataSchema = new db.Schema({
