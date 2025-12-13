@@ -54,7 +54,8 @@ router.post("/register", async function (req, res) {
                 id: device._id,
                 deviceId: device.deviceId,
                 nickname: device.nickname,
-                apiKey: device.apiKey
+                apiKey: device.apiKey,
+                measurementFrequencySeconds: device.measurementFrequencySeconds
             }
         });
     } catch {
