@@ -70,12 +70,47 @@ function App() {
           />
 
           {/* Physician routes */}
-          <Route path="/assign-physician" element={<AssignPhysician />} />
-          <Route path="/physician-dashboard" element={<PhysicianDashboard />}>
+          <Route
+            path="/assign-physician"
+            element={
+              <RequireAuth>
+                <AssignPhysician />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/physician-dashboard"
+            element={
+              <RequireAuth>
+                <PhysicianDashboard />
+              </RequireAuth>
+            }
+          >
             {/* Nested physician routes */}
-            <Route path="patients" element={<PhysicianPatientDashboard />} />
-            <Route path="patient/:id/summary" element={<PatientSummary />} />
-            <Route path="patient/:id/daily" element={<PatientDailyDetails />} />
+            <Route
+              path="patients"
+              element={
+                <RequireAuth>
+                  <PhysicianPatientDashboard />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="patient/:id/summary"
+              element={
+                <RequireAuth>
+                  <PatientSummary />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="patient/:id/daily"
+              element={
+                <RequireAuth>
+                  <PatientDailyDetails />
+                </RequireAuth>
+              }
+            />
           </Route>
         </Routes>
       </div>

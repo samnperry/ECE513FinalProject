@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta
+      name="description"
+      content="SFWE 513 Heart Rate Monitor — team intro, project overview, dashboards for patients and physicians."
+    />
+    <meta property="og:title" content="SFWE 513 | Heart Rate Monitor" />
+    <meta
+      property="og:description"
+      content="Team portal for patients and physicians: device registration, summaries, daily details, and physician tools."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>SFWE 513 | Heart Rate Monitor</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --primary: #2563eb;
+        --accent: #10b981;
+        --border: #e2e8f0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      header.hero {
+        background: radial-gradient(circle at 20% 20%, #e0ecff 0, #f8fafc 40%),
+          radial-gradient(circle at 80% 0%, #e6f6ef 0, #f8fafc 45%);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 28px;
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 20px;
+        align-items: center;
+        box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      .hero h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        line-height: 1.2;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #e0ebff;
+        color: #1d4ed8;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .muted {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
+      }
+
+      .card h3 {
+        margin: 0 0 8px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .team-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 12px;
+        align-items: center;
+        box-shadow: 0 8px 26px rgba(15, 23, 42, 0.05);
+      }
+
+      .avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: linear-gradient(135deg, #dbeafe, #ecfdf3);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        color: #0f172a;
+        border: 1px solid var(--border);
+      }
+
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-weight: 600;
+        font-size: 13px;
+        margin-right: 6px;
+      }
+
+      ul.feature-list {
+        padding-left: 18px;
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      /* Hide landing once the app is launched or user chooses to continue */
+      .hide-landing #landing { display: none; }
+      /* While the landing is shown, keep the React app hidden */
+      .landing-active #root { display: none; }
+
+      @media (max-width: 800px) {
+        header.hero {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body class="landing-active">
+    <div id="landing" class="page">
+      <header class="hero">
+        <div>
+          <div class="pill">SFWE 513 · Heart Rate Monitor</div>
+          <h1>Patient & Physician Monitoring Portal</h1>
+          <p class="muted">
+            Secure dashboards, device onboarding, and clinician tools for tracking
+            heart rate and SpO2 trends. Built for responsive access across desktop
+            and mobile.
+          </p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+            <span class="tag">Device registration</span>
+            <span class="tag">Weekly & daily insights</span>
+            <span class="tag">Physician portal</span>
+          </div>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #e0ecff, #ecfdf3);">
+          <h3 style="margin: 0 0 8px;">Project snapshot</h3>
+          <p class="muted" style="margin: 0 0 6px;">Front-end</p>
+          <ul class="feature-list">
+            <li>Responsive layout, Space Grotesk typography</li>
+            <li>Device register, dashboards, physician views</li>
+            <li>Charts and filters for weekly/daily data</li>
+          </ul>
+          <p class="muted" style="margin: 10px 0 6px;">Back-end</p>
+          <ul class="feature-list">
+            <li>Node/Express API with role-based routes</li>
+            <li>Physician assignments, device frequency controls</li>
+            <li>Measurement ingestion endpoints with optional API key</li>
+          </ul>
+        </div>
+      </header>
+
+      <section>
+        <div class="section-title">
+          <h2 style="margin: 0;">Meet the team</h2>
+          <p class="muted" style="margin: 0;">Drop photos into <strong>public/assets/team/</strong> and match file names below.</p>
+        </div>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="avatar">
+              <!-- Place photo at public/assets/team/alex.jpg -->
+              <img src="./assets/team/alex.jpg" alt="Alex" onerror="this.style.display='none'; this.parentElement.textContent='A';" />
+            </div>
+            <div>
+              <h3 style="margin: 0;">Alex Doe</h3>
+              <p class="muted" style="margin: 4px 0 6px;">Frontend & UI</p>
+              <p style="margin: 0; font-weight: 600;">alex@example.com</p>
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="avatar">
+              <!-- Place photo at public/assets/team/brooke.jpg -->
+              <img src="./assets/team/brooke.jpg" alt="Brooke" onerror="this.style.display='none'; this.parentElement.textContent='B';" />
+            </div>
+            <div>
+              <h3 style="margin: 0;">Brooke Smith</h3>
+              <p class="muted" style="margin: 4px 0 6px;">Backend & API</p>
+              <p style="margin: 0; font-weight: 600;">brooke@example.com</p>
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="avatar">
+              <!-- Place photo at public/assets/team/casey.jpg -->
+              <img src="./assets/team/casey.jpg" alt="Casey" onerror="this.style.display='none'; this.parentElement.textContent='C';" />
+            </div>
+            <div>
+              <h3 style="margin: 0;">Casey Lee</h3>
+              <p class="muted" style="margin: 4px 0 6px;">Data & Charts</p>
+              <p style="margin: 0; font-weight: 600;">casey@example.com</p>
+            </div>
+          </div>
+          <div class="team-card">
+            <div class="avatar">
+              <!-- Place photo at public/assets/team/devon.jpg -->
+              <img src="./assets/team/devon.jpg" alt="Devon" onerror="this.style.display='none'; this.parentElement.textContent='D';" />
+            </div>
+            <div>
+              <h3 style="margin: 0;">Devon Patel</h3>
+              <p class="muted" style="margin: 4px 0 6px;">Infra & Security</p>
+              <p style="margin: 0; font-weight: 600;">devon@example.com</p>
+            </div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 10px;">
+          To update photos: add files to <strong>public/assets/team/</strong> and adjust the <code>img</code> src names above to match your filenames.
+        </p>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <h2 style="margin: 0;">What we built</h2>
+          <span class="pill" style="background:#ecfdf3; color:#047857;">Responsive design</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>Patient experience</h3>
+            <p class="muted">Device registration, weekly summaries, daily detail charts, and time-range filters.</p>
+          </div>
+          <div class="card">
+            <h3>Physician portal</h3>
+            <p class="muted">Assign physicians, view patient lists, summaries, daily details, and adjust measurement frequency.</p>
+          </div>
+          <div class="card">
+            <h3>Security & auth</h3>
+            <p class="muted">Role-based signup/login, protected routes, optional device API key for measurement ingestion.</p>
+          </div>
+          <div class="card">
+            <h3>Deployment ready</h3>
+            <p class="muted">HTTPS via Nginx/certbot, configurable CORS, and API base for cloud deployment.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <a href="/login" style="text-decoration:none;" data-hide-landing="true">
+            <span class="pill" style="background:#2563eb; color:#fff;">Go to app &rarr;</span>
+          </a>
+          <a href="/signup" style="text-decoration:none;" data-hide-landing="true">
+            <span class="pill" style="background:#10b981; color:#0f172a;">Create account</span>
+          </a>
+        </div>
+      </section>
+
+      <footer>
+        SFWE 513 · Heart Rate Monitor — Responsive team & project overview
+      </footer>
+    </div>
+    <!-- React app mounts here -->
+    <div id="root"></div>
+    <script>
+      (function () {
+        const body = document.body;
+        const showApp = () => {
+          body.classList.add("hide-landing");
+          body.classList.remove("landing-active");
+        };
+
+        if (sessionStorage.getItem("hideLanding") || localStorage.getItem("token")) {
+          showApp();
+        }
+
+        document.addEventListener("click", (e) => {
+          const target = e.target.closest("[data-hide-landing]");
+          if (target) {
+            sessionStorage.setItem("hideLanding", "1");
+            showApp();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
