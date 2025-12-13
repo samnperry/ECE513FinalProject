@@ -13,7 +13,8 @@ const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL;  // default: 
 const unsigned long PROMPT_WINDOW_MS        = 5UL  * 60UL * 1000UL; // prompt window: 5 min
 const unsigned long LED_BLINK_MS            = 500;                  // blink speed
 const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
-const unsigned long ACK_TIMEOUT_MS          = 10UL * 1000UL;        // wait for webhook response
+const unsigned long ACK_TIMEOUT_MS          = 20UL * 1000UL;        // wait up to 20s for webhook response
+const unsigned long BACKLOG_FLUSH_DELAY_MS  = 20UL * 1000UL;        // stay idle 20s between backlog attempts
 
 const uint8_t ALLOWED_START_HOUR = 6;   // 6am
 const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
@@ -160,6 +161,7 @@ void onHookError(const char *event, const char *data) {
     (void)event; (void)data;
     g_hookReceived = true;
     g_hookSuccess  = false;
+    Serial.printf("HOOK ERROR event=%s data=%s\n", event ? event : "(null)", data ? data : "(null)");
 }
 
 // |~~~~~~~~~~~~~~| Non-blocking LED Helpers |~~~~~~~~~~~~~~|
@@ -238,6 +240,12 @@ uint8_t stableCount = 0;                // For reading valid sensor values
 MeasurementRecord pending;              // Setup a possible recording
 bool pendingValid     = false;
 bool pendingFromQueue = false;
+
+unsigned long backlogNextAllowedMs = 0;
+
+void scheduleBacklogPause() {
+  backlogNextAllowedMs = millis() + BACKLOG_FLUSH_DELAY_MS;
+}
 
 bool isOnline() {
   // means we can publish + receive hook-response
@@ -335,13 +343,11 @@ bool publishMeasurement(const MeasurementRecord &rec) {
             "\"heartRate\":%d,"
             "\"spo2\":%d,"
             "\"timestamp\":%lu,"
-            "\"apiKey\":\"%s\""
         "}",
         deviceId.c_str(),
         (int)rec.heartRate,
         (int)rec.spo2,
-        (unsigned long)rec.timestamp,
-        API_KEY
+        (unsigned long)rec.timestamp
     );
 
     return Particle.publish(MEAS_EVENT, payload, PRIVATE);
@@ -488,6 +494,7 @@ void loop() {
     case STATE_IDLE_WAIT: {
       // If we reconnect and have backlog, flush first
       if (isOnline() && queueCount() > 0) {
+        if (millis() < backlogNextAllowedMs) break;
         enterState(STATE_FLUSH_BACKLOG);
         break;
       }
@@ -687,9 +694,10 @@ void loop() {
         pendingValid = true;
         pendingFromQueue = true;
 
+        scheduleBacklogPause();
         enterState(STATE_SEND_PENDING);
         break;
-    }
+      }
 
     case STATE_FLASH_GREEN: {
       // Brief green flash after server-confirmed record
