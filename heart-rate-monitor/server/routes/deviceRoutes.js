@@ -131,4 +131,21 @@ router.get("/:id", async function (req, res) {
     }
 });
 
+// Public config lookup by deviceId (for device firmware to pull current frequency)
+router.get("/config/:deviceId", async function (req, res) {
+    try {
+        const device = await Device.findOne({ deviceId: req.params.deviceId });
+        if (!device) {
+            return res.status(404).json({ error: "Device not found" });
+        }
+        res.json({
+            deviceId: device.deviceId,
+            measurementFrequencySeconds: device.measurementFrequencySeconds,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to load device config" });
+    }
+});
+
 module.exports = router;

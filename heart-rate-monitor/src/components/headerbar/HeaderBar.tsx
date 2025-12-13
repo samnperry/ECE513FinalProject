@@ -6,11 +6,13 @@ import { NavLink, useNavigate } from "react-router-dom";
 export default function Header() {
   const navigate = useNavigate();
   const isAuthenticated = Boolean(localStorage.getItem("token"));
+  const role = localStorage.getItem("role");
 
   const handleLogout = () => {
     // Remove saved login data
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
+    localStorage.removeItem("role");
 
     navigate("/login");
   };
@@ -28,21 +30,23 @@ export default function Header() {
         </div>
 
         <nav className="nav-links">
-          <NavLink to="/home" className={getLinkClass}>
-            Home
-          </NavLink>
-          <NavLink to="/dashboard" className={getLinkClass}>
-            Dashboard
-          </NavLink>
+          {role === "physician" && (
+            <NavLink to="/physician-dashboard/patients" className={getLinkClass}>
+              Physician Dashboard
+            </NavLink>
+          )}
+          {role !== "physician" && <NavLink to="/dashboard" className={getLinkClass}>Dashboard</NavLink>}
           <NavLink to="/reference" className={getLinkClass}>
             Reference
           </NavLink>
           <NavLink to="/account" className={getLinkClass}>
             Account
           </NavLink>
-          <NavLink to="/device" className={getLinkClass}>
-            Devices
-          </NavLink>
+          {role !== "physician" && (
+            <NavLink to="/device" className={getLinkClass}>
+              Devices
+            </NavLink>
+          )}
           {!isAuthenticated && (
             <>
               <NavLink to="/login" className={getLinkClass}>
