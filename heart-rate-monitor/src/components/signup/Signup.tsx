@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
+const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
+
+function isStrongPassword(pw: string) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/.test(pw);
+}
+
 const Signup: React.FC = function() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,11 +18,16 @@ const Signup: React.FC = function() {
     e.preventDefault();
     setMessage("");
 
+    if (!isStrongPassword(password)) {
+      setMessage("Password must be at least 8 chars with upper, lower, number, and special character.");
+      return;
+    }
+
     // Determine endpoint based on role
     const endpoint =
       role === "physician"
-        ? "http://localhost:5001/api/auth/physician/signup"
-        : "http://localhost:5001/api/auth/signup";
+        ? `${API_BASE}/api/auth/physician/signup`
+        : `${API_BASE}/api/auth/signup`;
 
     try {
       const res = await fetch(endpoint, {

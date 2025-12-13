@@ -28,16 +28,25 @@ router.put("/update", async function (req, res) {
             return res.status(401).json({ error: "Invalid or missing token" });
         }
 
-        const { email, password } = req.body;
+        const { password } = req.body;
         const updates = {};
 
-        if (email) {
-            updates.email = email;
+        // Email updates are not allowed
+        if (!password) {
+            return res.status(400).json({ error: "Only password updates are allowed." });
         }
 
-        if (password) {
-            updates.passwordHash = await bcrypt.hash(password, 10);
+        // Password strength: at least 8 chars, upper, lower, number, special
+        const strong =
+            typeof password === "string" &&
+            /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/.test(password);
+        if (!strong) {
+            return res.status(400).json({
+                error: "Password must be at least 8 characters and include upper, lower, number, and special character.",
+            });
         }
+
+        updates.passwordHash = await bcrypt.hash(password, 10);
 
         const user = await User.findByIdAndUpdate(decoded.id, updates, { new: true });
 

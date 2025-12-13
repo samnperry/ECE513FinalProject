@@ -15,9 +15,12 @@ const PhysicianPatientDashboard: React.FC = () => {
     const fetchPatients = async () => {
       const token = localStorage.getItem("token");
       try {
-        const res = await fetch("http://localhost:5001/api/physician/patients", {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(
+          `${process.env.REACT_APP_API_BASE || "http://localhost:5001"}/api/physician/patients`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
         const data = await res.json();
         if (!res.ok) {
           setError(data.error || "Failed to fetch patients");

@@ -4,6 +4,7 @@ const jwt = require("jwt-simple");
 const User = require("../models/user");
 const Device = require("../models/device");
 const HeartData = require("../models/heartData");
+const Measurement = require("../models/measurement");
 
 const router = express.Router();
 const SECRET = "super-secret-key";
@@ -104,11 +105,20 @@ router.get("/patient/:id/summary", async (req, res) => {
 
         const summaries = [];
         for (const d of patient.devices) {
-            const latest = await HeartData.findOne({ device: d._id })
+            const latest = await Measurement.findOne({ deviceId: d.deviceId })
                 .sort({ timestamp: -1 })
                 .limit(1);
 
-            summaries.push({ device: d, latest });
+            summaries.push({
+                device: { deviceId: d.deviceId, nickname: d.nickname },
+                latest: latest
+                    ? {
+                          bpm: latest.heartRate,
+                          spo2: latest.spo2,
+                          timestamp: latest.timestamp,
+                      }
+                    : null,
+            });
         }
 
         res.json({ patient: { id: patient._id, email: patient.email }, summaries });
@@ -146,12 +156,19 @@ router.get("/patient/:id/daily", async (req, res) => {
 
         const details = [];
         for (const d of patient.devices) {
-            const entries = await HeartData.find({
-                device: d._id,
-                timestamp: { $gte: dayStart, $lt: dayEnd }
+            const entries = await Measurement.find({
+                deviceId: d.deviceId,
+                timestamp: { $gte: dayStart, $lt: dayEnd },
             }).sort({ timestamp: 1 });
 
-            details.push({ device: d, entries });
+            details.push({
+                device: { deviceId: d.deviceId, nickname: d.nickname },
+                entries: entries.map((e) => ({
+                    bpm: e.heartRate,
+                    spo2: e.spo2,
+                    timestamp: e.timestamp,
+                })),
+            });
         }
 
         res.json({ date: dateParam, details });

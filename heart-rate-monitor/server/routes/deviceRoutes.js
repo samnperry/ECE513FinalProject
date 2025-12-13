@@ -83,6 +83,24 @@ router.delete("/:id", async function (req, res) {
     }
 });
 
+router.get("/list", async function (req, res) {
+    const userData = getUserFromToken(req);
+    if (!userData) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+        if (!userData.id || !Device.db.base.Types.ObjectId.isValid(userData.id)) {
+            return res.status(400).json({ error: "Invalid user id" });
+        }
+        const devices = await Device.find({ user: userData.id }).select("deviceId nickname");
+        res.json({ devices });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to load devices" });
+    }
+});
+
 router.get("/:id", async function (req, res) {
     const userData = getUserFromToken(req);
     if (!userData) {
@@ -90,6 +108,9 @@ router.get("/:id", async function (req, res) {
     }
 
     try {
+        if (!Device.db.base.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ error: "Invalid device id" });
+        }
         const device = await Device.findById(req.params.id).populate("user", "email");
         if (!device) {
             return res.status(404).json({ error: "Device not found" });

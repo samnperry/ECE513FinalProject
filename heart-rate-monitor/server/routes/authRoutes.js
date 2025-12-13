@@ -6,6 +6,13 @@ var User = require("../models/user");
 var router = express.Router();
 var SECRET = "super-secret-key";
 
+function isStrongPassword(pw) {
+    if (typeof pw !== "string") return false;
+    // At least 8 chars, 1 upper, 1 lower, 1 number, 1 special
+    const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/;
+    return re.test(pw);
+}
+
 router.post("/signup", async function (req, res) {
     const { email, password } = req.body;
 
@@ -13,6 +20,13 @@ router.post("/signup", async function (req, res) {
         const existing = await User.findOne({ email });
         if (existing) {
             return res.status(400).json({ error: "Email already exists" });
+        }
+
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({
+                error:
+                    "Password must be at least 8 characters and include upper, lower, number, and special character.",
+            });
         }
 
         const hash = await bcrypt.hash(password, 10);
@@ -42,6 +56,13 @@ router.post("/physician/signup", async function (req, res) {
         const existing = await User.findOne({ email });
         if (existing) {
             return res.status(400).json({ error: "Email already exists" });
+        }
+
+        if (!isStrongPassword(password)) {
+            return res.status(400).json({
+                error:
+                    "Password must be at least 8 characters and include upper, lower, number, and special character.",
+            });
         }
 
         const hash = await bcrypt.hash(password, 10);
