@@ -9,6 +9,7 @@ const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
 export function AccountPage() {
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
+  const role = localStorage.getItem("role");
 
   const isStrongPassword = (pw: string) =>
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,}$/.test(pw);
@@ -25,6 +26,7 @@ export function AccountPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (role === "physician") return;
     const loadPhysicians = async () => {
       if (!token) {
         setError("Login required to load physicians.");
@@ -45,9 +47,10 @@ export function AccountPage() {
       }
     };
     loadPhysicians();
-  }, [token]);
+  }, [token, role]);
 
   useEffect(() => {
+    if (role === "physician") return;
     const loadDevices = async () => {
       if (!token) {
         setError("Login required to load devices.");
@@ -68,7 +71,7 @@ export function AccountPage() {
       }
     };
     loadDevices();
-  }, [token]);
+  }, [token, role]);
 
   const handleUpdatePassword = async () => {
     setStatus(null);
@@ -218,77 +221,81 @@ export function AccountPage() {
           </div>
         </div>
 
-        <div className="card">
-          <h2>Devices</h2>
-          <p className="muted">Add/remove linked devices and set nicknames.</p>
-          <div className="form-actions" style={{ marginTop: 8 }}>
-            <input
-              type="text"
-              placeholder="Device ID"
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              className="full-width"
-            />
-            <input
-              type="text"
-              placeholder="Nickname (optional)"
-              value={deviceNickname}
-              onChange={(e) => setDeviceNickname(e.target.value)}
-              className="full-width"
-            />
-            <button className="primary-btn" type="button" onClick={handleRegisterDevice}>
-              Add device
-            </button>
-          </div>
-          <div className="form-actions" style={{ marginTop: 10 }}>
-            <select
-              value={selectedDeviceForRemoval}
-              onChange={(e) => setSelectedDeviceForRemoval(e.target.value)}
-              className="full-width"
-            >
-              <option value="">Select a device to remove</option>
-              {devices.map((d) => (
-                <option key={d._id} value={d._id}>
-                  {d.deviceId} {d.nickname ? `(${d.nickname})` : ""}
-                </option>
-              ))}
-            </select>
-            <button className="outline-button full-width" type="button" onClick={handleRemoveDevice}>
-              Remove device
-            </button>
-          </div>
-          <p className="muted" style={{ marginTop: 6 }}>
-            Note: removal expects the device record ID (from the database). Registering uses the public device ID.
-          </p>
-          {devices.length > 0 && (
-            <p className="muted" style={{ marginTop: 6 }}>
-              Linked devices:{" "}
-              {devices.map((d) => `${d.deviceId}${d.nickname ? ` (${d.nickname})` : ""}`).join(", ")}
-            </p>
-          )}
-        </div>
+        {role !== "physician" && (
+          <>
+            <div className="card">
+              <h2>Devices</h2>
+              <p className="muted">Add/remove linked devices and set nicknames.</p>
+              <div className="form-actions" style={{ marginTop: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Device ID"
+                  value={deviceId}
+                  onChange={(e) => setDeviceId(e.target.value)}
+                  className="full-width"
+                />
+                <input
+                  type="text"
+                  placeholder="Nickname (optional)"
+                  value={deviceNickname}
+                  onChange={(e) => setDeviceNickname(e.target.value)}
+                  className="full-width"
+                />
+                <button className="primary-btn" type="button" onClick={handleRegisterDevice}>
+                  Add device
+                </button>
+              </div>
+              <div className="form-actions" style={{ marginTop: 10 }}>
+                <select
+                  value={selectedDeviceForRemoval}
+                  onChange={(e) => setSelectedDeviceForRemoval(e.target.value)}
+                  className="full-width"
+                >
+                  <option value="">Select a device to remove</option>
+                  {devices.map((d) => (
+                    <option key={d._id} value={d._id}>
+                      {d.deviceId} {d.nickname ? `(${d.nickname})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button className="outline-button full-width" type="button" onClick={handleRemoveDevice}>
+                  Remove device
+                </button>
+              </div>
+              <p className="muted" style={{ marginTop: 6 }}>
+                Note: removal expects the device record ID (from the database). Registering uses the public device ID.
+              </p>
+              {devices.length > 0 && (
+                <p className="muted" style={{ marginTop: 6 }}>
+                  Linked devices:{" "}
+                  {devices.map((d) => `${d.deviceId}${d.nickname ? ` (${d.nickname})` : ""}`).join(", ")}
+                </p>
+              )}
+            </div>
 
-        <div className="card">
-          <h2>Physician</h2>
-          <p className="muted">Choose a physician to link with your account.</p>
-          <div className="form-actions" style={{ marginTop: 8 }}>
-            <select
-              value={selectedPhysician}
-              onChange={(e) => setSelectedPhysician(e.target.value)}
-              className="full-width"
-            >
-              <option value="">Select physician</option>
-              {physicians.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.email}
-                </option>
-              ))}
-            </select>
-            <button className="primary-btn" type="button" onClick={handleAssignPhysician}>
-              Assign physician
-            </button>
-          </div>
-        </div>
+            <div className="card">
+              <h2>Physician</h2>
+              <p className="muted">Choose a physician to link with your account.</p>
+              <div className="form-actions" style={{ marginTop: 8 }}>
+                <select
+                  value={selectedPhysician}
+                  onChange={(e) => setSelectedPhysician(e.target.value)}
+                  className="full-width"
+                >
+                  <option value="">Select physician</option>
+                  {physicians.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.email}
+                    </option>
+                  ))}
+                </select>
+                <button className="primary-btn" type="button" onClick={handleAssignPhysician}>
+                  Assign physician
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );
