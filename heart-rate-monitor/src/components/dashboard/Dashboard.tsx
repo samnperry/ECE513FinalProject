@@ -36,7 +36,6 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
   const [deviceId, setDeviceId] = useState(
     () => localStorage.getItem("deviceId") ?? ""
   );
-  const [rawOutput, setRawOutput] = useState("");
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -79,7 +78,6 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
       }
 
       const data = await res.json();
-      setRawOutput(JSON.stringify(data, null, 2));
     } catch (err) {
       setError("Error registering device");
     }
@@ -109,7 +107,6 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
 
       const data: Measurement[] = await res.json();
       setMeasurements(data);
-      setRawOutput(JSON.stringify(data, null, 2));
       setLastUpdated(new Date());
       localStorage.setItem("deviceId", deviceId);
     } catch (err) {
@@ -296,7 +293,7 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
       if (!res.ok) throw new Error();
 
       setStatusMessage(
-        `Measurement frequency set to every ${frequencyMinutes} minutes`
+        `Measurement frequency set to every ${frequencyMinutes} minutes. It will take about hour for the device to receive the new setting.`
       );
     } catch {
       setError("Failed to update device frequency");
@@ -619,20 +616,6 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
             </div>
           </div>
         )}
-      </section>
-
-      <section className="card">
-        <div className="section-header">
-          <h2>Raw API output</h2>
-          <p className="muted">Quick view of the latest response for debugging.</p>
-        </div>
-        <textarea
-          id="rxData"
-          title="rxData"
-          readOnly
-          value={rawOutput}
-          placeholder="Run a refresh to see device data."
-        ></textarea>
       </section>
     </div>
   );

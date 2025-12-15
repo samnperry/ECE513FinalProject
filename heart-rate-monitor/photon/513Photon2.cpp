@@ -25,6 +25,10 @@ void scheduleBacklogPause();
 bool isOnline();
 bool withinAllowedHours();
 uint32_t bestEffortTimestamp();
+int parseFrequencySeconds(const String &body);
+void requestMeasurementFrequency();
+void onConfigResponse(const char *event, const char *data);
+void onCloudConnect(const char* event, const char* data);
 void resetAcquisitionBuffers();
 void updateMax30102();
 void setup();
@@ -39,6 +43,8 @@ const unsigned long LED_BLINK_MS            = 500;                  // blink spe
 const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
 const unsigned long ACK_TIMEOUT_MS          = 20UL * 1000UL;        // wait up to 20s for webhook response
 const unsigned long BACKLOG_FLUSH_DELAY_MS  = 20UL * 1000UL;        // stay idle 20s between backlog attempts
+const unsigned long FREQUENCY_REFRESH_MS = 60UL * 60UL * 1000UL;    // 1 hour
+unsigned long lastFrequencyFetchMs = 0;
 
 const uint8_t ALLOWED_START_HOUR = 6;   // 6am
 const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
@@ -48,15 +54,14 @@ const uint8_t  STABLE_REQUIRED     = 6;     // consecutive valid algorithm outpu
 
 // Particle webhook event name 
 const char* MEAS_EVENT = "Photon2_SendEvent";
-
-// Backend API key requirement
-const char* API_KEY = "3cf562803c98eee6f2df540bdc3b45a61e2b93200790ca78dbbfe4c3ce47a38c";
+const char* CONFIG_REQUEST_EVENT = "Photon2_Config_Request";
 
 // |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
 const int LED_D7 = D7;
 
 // |~~~~~~~~~~~~~~| Particle Vars |~~~~~~~~~~~~~~|
 String deviceId;
+unsigned long measurementIntervalMs = MEASUREMENT_INTERVAL_MS; // updated via server config
 
 // |~~~~~~~~~~~~~~| Sensor Vars |~~~~~~~~~~~~~~|
 MAX30105 particleSensor;
@@ -292,6 +297,79 @@ uint32_t bestEffortTimestamp() {
   return 0;
 }
 
+int parseFrequencySeconds(const String &body) {
+  int idx = body.indexOf("measurementFrequencySeconds");
+  if (idx < 0) return -1;
+  idx = body.indexOf(":", idx);
+  if (idx < 0) return -1;
+  idx++;
+  while (idx < (int)body.length() && !isDigit(body[idx])) idx++;
+  int start = idx;
+  while (idx < (int)body.length() && isDigit(body[idx])) idx++;
+  if (start >= (int)body.length()) return -1;
+  return body.substring(start, idx).toInt();
+}
+
+void requestMeasurementFrequency() {
+  // Publish the event, the server will receive it via the webhook
+  if (!Particle.connected()) {
+    Serial.println("Cloud not connected, delaying config request...");
+    return;
+  }
+
+  bool ok = Particle.publish(CONFIG_REQUEST_EVENT, deviceId, PRIVATE);
+  if (ok) {
+      Serial.println("Published config request event.");
+  } else {
+      Serial.println("Failed to publish config request.");
+  }
+}
+
+void onConfigResponse(const char *event, const char *data) {
+  if (!data) {
+    return;
+  }
+
+  Serial.printlnf("Config response received: %s", data);
+
+  // parse JSON to get measurementFrequencySeconds
+  String body = data;
+  int idx = body.indexOf("measurementFrequencySeconds");
+  if (idx >= 0) {
+    idx = body.indexOf(":", idx);
+    if (idx < 0) {
+      return;
+    }
+
+    unsigned int i = idx;
+    while (i < body.length() && !isDigit(body[i])) i++;
+    unsigned int start = i;
+    while (i < body.length() && isDigit(body[i])) i++;
+    
+    int frequencySec = body.substring(start, i).toInt();
+
+    if (frequencySec > 0) {
+        measurementIntervalMs = frequencySec * 1000UL;
+        nextPromptMs = millis() + measurementIntervalMs;
+        Serial.printlnf("Updated measurement interval: %d sec", frequencySec);
+    }
+  }
+}
+
+void onCloudConnect(const char* event, const char* data) {
+    if (!data) {
+      return;
+    }
+    
+    if (String(data) != "connected") {
+      return;
+    }
+
+    Serial.println("Cloud connected! Requesting measurement frequency...");
+    requestMeasurementFrequency();
+    lastFrequencyFetchMs = millis();
+}
+
 // Reset the sensor value storage to help increase accuracy 
 void resetAcquisitionBuffers() {
   bufferIndex  = 0;
@@ -466,6 +544,10 @@ void setup() {
     // Subscribe to webhook response/error for ACK behavior
     Particle.subscribe(String::format("hook-response/%s", MEAS_EVENT), onHookResponse, MY_DEVICES);
     Particle.subscribe(String::format("hook-error/%s",    MEAS_EVENT), onHookError,    MY_DEVICES);
+    Particle.subscribe(String::format("hook-response/%s", CONFIG_REQUEST_EVENT), onConfigResponse, MY_DEVICES);
+    Particle.subscribe(String::format("hook-error/%s",    CONFIG_REQUEST_EVENT), onHookError,    MY_DEVICES);
+
+    Particle.subscribe("spark/status", onCloudConnect, MY_DEVICES);
 
     // Sensor init
     if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
@@ -488,9 +570,14 @@ void setup() {
     particleSensor.setPulseAmplitudeGreen(0);
 
     Serial.println("MAX30102 initialized.");
-
-    // Try prompt soon after boot 
+    
     nextPromptMs = millis() + 2000;
+
+    waitFor(Particle.connected, 10000); // wait up to 10s
+    if (Particle.connected()) {
+      requestMeasurementFrequency();
+    } 
+    lastFrequencyFetchMs = millis();
 
     enterState(STATE_IDLE_WAIT);
 }
@@ -511,6 +598,11 @@ void loop() {
 
   // Prune when RTC valid
   queuePruneOlderThan24h();
+
+  if (millis() - lastFrequencyFetchMs >= FREQUENCY_REFRESH_MS && isOnline()) {
+    requestMeasurementFrequency();
+    lastFrequencyFetchMs = millis();
+  }
 
   // State Machine Central
   switch (state) {
@@ -543,7 +635,7 @@ void loop() {
       // If a measure wasnt taken within window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
         // Stop prompting until next interval
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         enterState(STATE_IDLE_WAIT);
         break;
       }
@@ -562,7 +654,7 @@ void loop() {
     case STATE_ACQUIRE: {
       // Keep an eye on the measure window
       if (now - promptSessionMs >= PROMPT_WINDOW_MS) {
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         enterState(STATE_IDLE_WAIT);
         break;
       }
@@ -652,7 +744,7 @@ void loop() {
             }
 
             // Schedule next prompt interval
-            nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+            nextPromptMs = now + measurementIntervalMs;
 
             enterState(STATE_FLASH_GREEN);
         } else {
@@ -661,7 +753,7 @@ void loop() {
             // If it was from the queue, keep it
             if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
             else {
-                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                nextPromptMs = now + measurementIntervalMs;
                 enterState(STATE_IDLE_WAIT);
             }
         }
@@ -673,7 +765,7 @@ void loop() {
             Serial.println("ACK timeout.");
             if (!pendingFromQueue) enterState(STATE_STORE_OFFLINE);
             else {
-                nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+                nextPromptMs = now + measurementIntervalMs;
                 enterState(STATE_IDLE_WAIT);
             }
       }
@@ -688,7 +780,7 @@ void loop() {
         }
 
         // Schedule next measurement prompt interval from now
-        nextPromptMs = now + MEASUREMENT_INTERVAL_MS;
+        nextPromptMs = now + measurementIntervalMs;
         // Flash before returning to wait
         enterState(STATE_FLASH_YELLOW);
         break;
