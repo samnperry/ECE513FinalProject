@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 type Props = { deviceId: string };
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
+const API_BASE = "https://sfwe513.publicvm.com";
 
 const AdjustPatientFrequency: React.FC<Props> = ({ deviceId }) => {
   const [minutes, setMinutes] = useState<number>(15);

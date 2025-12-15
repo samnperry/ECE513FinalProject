@@ -18,7 +18,7 @@ interface PatientDaily {
   details: DeviceDetail[];
 }
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
+const API_BASE = "https://sfwe513.publicvm.com";
 
 const PatientDailyDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();

@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
+const API_BASE = "https://sfwe513.publicvm.com";
 
 const PhysicianDashboard: React.FC = () => {
   const navigate = useNavigate();

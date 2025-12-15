@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../pages/Pages.css";
 
+const API_BASE = "https://sfwe513.publicvm.com";
+
 const Login: React.FC = function () {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,7 +15,7 @@ const Login: React.FC = function () {
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/login", {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "../pages/Pages.css";
 
+const API_BASE = "https://sfwe513.publicvm.com";
+
 const DeviceRegister: React.FC = function () {
   const [deviceId, setDeviceId] = useState("");
   const [nickname, setNickname] = useState("");
@@ -17,7 +19,7 @@ const DeviceRegister: React.FC = function () {
     }
 
     try {
-      const res = await fetch("http://localhost:5001/api/device/register", {
+      const res = await fetch(`${API_BASE}/api/device/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

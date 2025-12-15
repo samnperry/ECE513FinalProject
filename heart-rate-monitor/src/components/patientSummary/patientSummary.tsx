@@ -22,7 +22,7 @@ const PatientSummary: React.FC = () => {
       const token = localStorage.getItem("token");
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_BASE || "http://localhost:5001"}/api/physician/patient/${id}/summary`,
+          `https://sfwe513.publicvm.com/api/physician/patient/${id}/summary`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }

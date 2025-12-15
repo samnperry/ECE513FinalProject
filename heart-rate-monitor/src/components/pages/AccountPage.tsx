@@ -4,7 +4,7 @@ import "./Pages.css";
 type Physician = { _id: string; email: string; name?: string };
 type DeviceRecord = { _id: string; deviceId: string; nickname?: string };
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001";
+const API_BASE = "https://sfwe513.publicvm.com";
 
 export function AccountPage() {
   const token = localStorage.getItem("token");

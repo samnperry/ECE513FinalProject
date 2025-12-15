@@ -49,7 +49,7 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
   const chartRef = useRef<Chart | null>(null);
   const chartCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5001"; // backend
+  const API_BASE = "https://sfwe513.publicvm.com"; // backend
   const token = localStorage.getItem("token");
 
   const navigate = useNavigate();

@@ -291,9 +291,6 @@
           <a href="/login" style="text-decoration:none;" data-hide-landing="true">
             <span class="pill" style="background:#2563eb; color:#fff;">Go to app &rarr;</span>
           </a>
-          <a href="/signup" style="text-decoration:none;" data-hide-landing="true">
-            <span class="pill" style="background:#10b981; color:#0f172a;">Create account</span>
-          </a>
         </div>
       </section>
 
@@ -312,16 +309,16 @@
         };
 
         const path = window.location.pathname;
-        // Auto-show the React app on any deep link (not the root landing),
-        // or if the user already chose to continue during this session.
-        if (path !== "/" || sessionStorage.getItem("hideLanding")) {
+        const hasToken = !!localStorage.getItem("token");
+
+        // Only keep the landing on root when unauthenticated.
+        if (!(path === "/" && !hasToken)) {
           showApp();
         }
 
         document.addEventListener("click", (e) => {
           const target = e.target.closest("[data-hide-landing]");
           if (target) {
-            sessionStorage.setItem("hideLanding", "1");
             showApp();
           }
         });

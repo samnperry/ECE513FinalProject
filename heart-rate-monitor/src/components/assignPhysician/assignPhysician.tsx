@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 
+const API_BASE = "https://sfwe513.publicvm.com";
+
 const AssignPhysician: React.FC = () => {
   const [physicians, setPhysicians] = useState<any[]>([]);
   const [selectedPhysician, setSelectedPhysician] = useState("");
@@ -11,7 +13,7 @@ const AssignPhysician: React.FC = () => {
   useEffect(() => {
     async function fetchPhysicians() {
       try {
-        const res = await fetch("http://localhost:5001/api/physician/list", {
+        const res = await fetch(`${API_BASE}/api/physician/list`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -38,7 +40,7 @@ const AssignPhysician: React.FC = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5001/api/physician/assign", {
+      const res = await fetch(`${API_BASE}/api/physician/assign`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
