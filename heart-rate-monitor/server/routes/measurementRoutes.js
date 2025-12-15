@@ -29,9 +29,7 @@ async function requireApiKey(req, res, next) {
     }
 }
 
-router.use(requireApiKey);
-
-router.post("/", async function (req, res) {
+router.post("/", requireApiKey, async function (req, res) {
     try {
         const { deviceId, heartRate, spo2 } = req.body;
 
@@ -50,10 +48,6 @@ router.post("/", async function (req, res) {
 router.get("/:deviceId", async function (req, res) {
     try {
         const deviceId = req.params.deviceId;
-
-        if (deviceId !== req.device.deviceId) {
-            return res.status(403).json({ error: "Device ID mismatch" });
-        }
 
         const list = await Measurement.find({ deviceId })
             .sort({ timestamp: -1 })
