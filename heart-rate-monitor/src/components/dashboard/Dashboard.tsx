@@ -43,12 +43,8 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [measurementFrequency, setMeasurementFrequency] = useState<string>(
-    () => localStorage.getItem("measurementFrequency") ?? "15"
-  );
-  const [physicianFrequency, setPhysicianFrequency] = useState<string>(
-    () => localStorage.getItem("physicianFrequency") ?? ""
-  );
+  const [deviceDbId, setDeviceDbId] = useState<string>(""); // Mongo _id
+  const [frequencyMinutes, setFrequencyMinutes] = useState<number>(30);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const chartRef = useRef<Chart | null>(null);
   const chartCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -127,11 +123,11 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
     const baseMeasurements =
       startDate || endDate
         ? measurements.filter((m) => {
-            const ts = new Date(m.timestamp).getTime();
-            const afterStart = startDate ? ts >= new Date(startDate).getTime() : true;
-            const beforeEnd = endDate ? ts <= new Date(endDate).getTime() : true;
-            return afterStart && beforeEnd;
-          })
+          const ts = new Date(m.timestamp).getTime();
+          const afterStart = startDate ? ts >= new Date(startDate).getTime() : true;
+          const beforeEnd = endDate ? ts <= new Date(endDate).getTime() : true;
+          return afterStart && beforeEnd;
+        })
         : measurements;
 
     const start = new Date();
@@ -156,8 +152,8 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
         count === 0
           ? null
           : Math.round(
-              forDay.reduce((sum, m) => sum + m.heartRate, 0) / count
-            );
+            forDay.reduce((sum, m) => sum + m.heartRate, 0) / count
+          );
       const avgSpO2 =
         count === 0
           ? null
@@ -187,14 +183,14 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
       totalReadings === 0
         ? null
         : Math.round(
-            recent.reduce((sum, m) => sum + m.heartRate, 0) / totalReadings
-          );
+          recent.reduce((sum, m) => sum + m.heartRate, 0) / totalReadings
+        );
     const avgSpO2 =
       totalReadings === 0
         ? null
         : Math.round(
-            recent.reduce((sum, m) => sum + m.spo2, 0) / totalReadings
-          );
+          recent.reduce((sum, m) => sum + m.spo2, 0) / totalReadings
+        );
 
     return {
       days,
@@ -206,41 +202,23 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
     };
   }, [measurements, startDate, endDate]);
 
-  const formatValue = (value: number | null, suffix = "") =>
-    value == null ? "—" : `${value}${suffix}`;
-
-  const effectiveFrequency = physicianFrequency || measurementFrequency;
-
-  const savePatientFrequency = () => {
-    setStatusMessage(`Measurement frequency set to every ${measurementFrequency} minutes.`);
-  };
-
-  const savePhysicianFrequency = () => {
-    if (!physicianFrequency) {
-      setStatusMessage("Physician override cleared. Using patient preference.");
-      return;
-    }
-    setStatusMessage(
-      `Physician override set to every ${physicianFrequency} minutes. Patients cannot change until cleared.`
-    );
-  };
 
   const dailySeries = useMemo(() => {
     const filtered =
       startDate || endDate
         ? measurements.filter((m) => {
-            const ts = new Date(m.timestamp).getTime();
-            const afterStart = startDate ? ts >= new Date(startDate).getTime() : true;
-            const beforeEnd = endDate ? ts <= new Date(endDate).getTime() : true;
-            return afterStart && beforeEnd;
-          })
+          const ts = new Date(m.timestamp).getTime();
+          const afterStart = startDate ? ts >= new Date(startDate).getTime() : true;
+          const beforeEnd = endDate ? ts <= new Date(endDate).getTime() : true;
+          return afterStart && beforeEnd;
+        })
         : (() => {
-            const cutoff = new Date();
-            cutoff.setHours(cutoff.getHours() - 24);
-            return measurements.filter(
-              (m) => new Date(m.timestamp).getTime() >= cutoff.getTime()
-            );
-          })();
+          const cutoff = new Date();
+          cutoff.setHours(cutoff.getHours() - 24);
+          return measurements.filter(
+            (m) => new Date(m.timestamp).getTime() >= cutoff.getTime()
+          );
+        })();
 
     const sorted = [...filtered].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -263,17 +241,67 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
     };
   }, [measurements, startDate, endDate]);
 
-  useEffect(() => {
-    localStorage.setItem("measurementFrequency", measurementFrequency);
-  }, [measurementFrequency]);
+  const formatValue = (value: number | null, suffix = "") =>
+    value == null ? "—" : `${value}${suffix}`;
 
   useEffect(() => {
-    if (physicianFrequency) {
-      localStorage.setItem("physicianFrequency", physicianFrequency);
-    } else {
-      localStorage.removeItem("physicianFrequency");
+    if (!token || !deviceId.trim()) return;
+
+    const fetchDevice = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/device/by-deviceId/${encodeURIComponent(deviceId)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error("Failed to load device");
+        }
+
+        const data = await res.json();
+        setDeviceDbId(data.device._id); // store MongoDB _id
+        setFrequencyMinutes(data.device.measurementFrequencySeconds / 60);
+        setError(""); // clear any previous error
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load device information");
+        setDeviceDbId(""); // clear old id
+      }
+    };
+
+    fetchDevice();
+  }, [token, deviceId]);
+
+
+  const saveFrequency = async () => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/device/${deviceDbId}/frequency`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify({
+            measurementFrequencyMinutes: frequencyMinutes,
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error();
+
+      setStatusMessage(
+        `Measurement frequency set to every ${frequencyMinutes} minutes`
+      );
+    } catch {
+      setError("Failed to update device frequency");
     }
-  }, [physicianFrequency]);
+  };
 
   useEffect(() => {
     if (!chartCanvasRef.current) return;
@@ -456,82 +484,31 @@ export function Dashboard({ userId: _userId }: DashboardProps) {
       {error && <div className="error-banner">{error}</div>}
       {statusMessage && <div className="info-banner">{statusMessage}</div>}
 
-      <section className="card">
-        <div className="section-header">
-          <div>
-            <h2>Measurement frequency</h2>
-            <p className="muted">
-              Configure how often devices send readings. Physician overrides win
-              over patient preferences.
-            </p>
-          </div>
-          <span className="pill">Active: every {effectiveFrequency} min</span>
-        </div>
-        <div className="settings-grid">
-          <div className="settings-panel">
-            <p className="eyebrow">Patient preference</p>
-            <div className="settings-row">
-              <select
-                value={measurementFrequency}
-                onChange={(e) => setMeasurementFrequency(e.target.value)}
-              >
-                <option value="5">Every 5 minutes</option>
-                <option value="10">Every 10 minutes</option>
-                <option value="15">Every 15 minutes</option>
-                <option value="30">Every 30 minutes</option>
-                <option value="60">Every 60 minutes</option>
-              </select>
-              <button
-                className="outline-button full-width"
-                type="button"
-                onClick={savePatientFrequency}
-              >
-                Save preference
-              </button>
-            </div>
-            <p className="helper">
-              Saved locally for now. Backend integration can persist per-user.
-            </p>
-          </div>
+      <section className="card frequency-card">
+        <h2>Measurement Frequency</h2>
+        <p className="muted">
+          Controls how often the device collects and uploads measurements.
+        </p>
 
-          <div className="settings-panel">
-            <p className="eyebrow">Physician override</p>
-            <div className="settings-row">
-              <select
-                value={physicianFrequency}
-                onChange={(e) => setPhysicianFrequency(e.target.value)}
-              >
-                <option value="">No override</option>
-                <option value="5">Every 5 minutes</option>
-                <option value="10">Every 10 minutes</option>
-                <option value="15">Every 15 minutes</option>
-                <option value="30">Every 30 minutes</option>
-                <option value="60">Every 60 minutes</option>
-              </select>
-              <div className="settings-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={savePhysicianFrequency}
-                >
-                  Apply override
-                </button>
-                <button
-                  className="link-button"
-                  type="button"
-                  onClick={() => setPhysicianFrequency("")}
-                >
-                  Clear override
-                </button>
-              </div>
-            </div>
-            <p className="helper">
-              When set, this value locks the measurement interval. Clear to
-              return to patient control.
-            </p>
-          </div>
+        <div className="frequency-controls">
+          <select
+            value={frequencyMinutes}
+            onChange={(e) => setFrequencyMinutes(Number(e.target.value))}
+          >
+            <option value={5}>Every 5 minutes</option>
+            <option value={10}>Every 10 minutes</option>
+            <option value={15}>Every 15 minutes</option>
+            <option value={30}>Every 30 minutes</option>
+            <option value={60}>Every 60 minutes</option>
+          </select>
+
+          <button className="primary-button" onClick={saveFrequency} disabled={!deviceDbId}>
+            Save frequency
+          </button>
         </div>
       </section>
+
+
 
       <section className="summary-grid">
         <div className="card summary-card">

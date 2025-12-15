@@ -16,6 +16,8 @@ const unsigned long LED_BLINK_MS            = 500;                  // blink spe
 const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
 const unsigned long ACK_TIMEOUT_MS          = 20UL * 1000UL;        // wait up to 20s for webhook response
 const unsigned long BACKLOG_FLUSH_DELAY_MS  = 20UL * 1000UL;        // stay idle 20s between backlog attempts
+const unsigned long FREQUENCY_REFRESH_MS = 60UL * 60UL * 1000UL;    // 1 hour
+unsigned long lastFrequencyFetchMs = 0;
 
 const uint8_t ALLOWED_START_HOUR = 6;   // 6am
 const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
@@ -514,8 +516,10 @@ void setup() {
 
     Serial.println("MAX30102 initialized.");
 
-    // Pull the current frequency override (physician/patient) and start prompt soon after boot
-    fetchMeasurementFrequency();
+    if (millis() - lastFrequencyFetchMs >= FREQUENCY_REFRESH_MS) {
+      fetchMeasurementFrequency();
+      lastFrequencyFetchMs = millis();
+  }
     nextPromptMs = millis() + 2000;
 
     enterState(STATE_IDLE_WAIT);

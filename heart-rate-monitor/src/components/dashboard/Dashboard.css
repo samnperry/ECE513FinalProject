@@ -314,3 +314,10 @@ textarea {
     height: 240px;
   }
 }
+
+.frequency-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* spacing between select and button */
+}
+

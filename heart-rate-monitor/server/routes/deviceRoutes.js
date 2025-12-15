@@ -132,6 +132,68 @@ router.get("/:id", async function (req, res) {
     }
 });
 
+router.post("/:id/frequency", async function (req, res) {
+    const userData = getUserFromToken(req);
+    if (!userData) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { measurementFrequencyMinutes } = req.body;
+
+    if (!measurementFrequencyMinutes || measurementFrequencyMinutes <= 0) {
+        return res.status(400).json({ error: "Invalid frequency" });
+    }
+
+    try {
+        const device = await Device.findById(req.params.id);
+        if (!device) {
+            return res.status(404).json({ error: "Device not found" });
+        }
+
+        if (String(device.user) !== String(userData.id)) {
+            return res.status(403).json({ error: "Not allowed" });
+        }
+
+        device.measurementFrequencySeconds =
+            measurementFrequencyMinutes * 60;
+
+        await device.save();
+
+        res.json({
+            message: "Measurement frequency updated",
+            measurementFrequencySeconds: device.measurementFrequencySeconds,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to update frequency" });
+    }
+});
+
+// Get a device by deviceId for the logged-in user
+router.get("/by-deviceId/:deviceId", async (req, res) => {
+    const userData = getUserFromToken(req);
+    if (!userData) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+        const device = await Device.findOne({
+            deviceId: req.params.deviceId,
+            user: userData.id
+        }).populate("user", "email");
+
+        if (!device) {
+            return res.status(404).json({ error: "Device not found" });
+        }
+
+        res.json({ device });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Failed to fetch device" });
+    }
+});
+
+
 // Public config lookup by deviceId (for device firmware to pull current frequency)
 router.get("/config/:deviceId", async function (req, res) {
     try {
