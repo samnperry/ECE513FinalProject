@@ -3,7 +3,6 @@ const express = require("express");
 const jwt = require("jwt-simple");
 const User = require("../models/user");
 const Device = require("../models/device");
-const HeartData = require("../models/heartData");
 const Measurement = require("../models/measurement");
 
 const router = express.Router();

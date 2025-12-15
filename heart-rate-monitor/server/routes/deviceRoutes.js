@@ -202,7 +202,6 @@ router.get("/config/:deviceId", async function (req, res) {
             return res.status(404).json({ error: "Device not found" });
         }
         res.json({
-            deviceId: device.deviceId,
             measurementFrequencySeconds: device.measurementFrequencySeconds,
         });
     } catch (err) {
