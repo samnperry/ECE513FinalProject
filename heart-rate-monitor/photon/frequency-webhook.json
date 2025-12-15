@@ -1,0 +1,7 @@
+{
+  "event": "Photon2_Config_Request",
+  "url": "https://sfwe513.publicvm.com/api/device/config/{{PARTICLE_EVENT_VALUE}}",
+  "requestType": "GET",
+  "dataUrlResponseEvent": true,
+  "noDefaults": false
+}

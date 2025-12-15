@@ -5,7 +5,6 @@
 #include "Particle.h"
 #include "MAX30105.h"        // SparkFun-MAX3010x
 #include "spo2_algorithm.h"  // Same library for sensor
-#include "HttpClient.h"
 
 SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
 
@@ -27,12 +26,7 @@ const uint8_t  STABLE_REQUIRED     = 6;     // consecutive valid algorithm outpu
 
 // Particle webhook event name 
 const char* MEAS_EVENT = "Photon2_SendEvent";
-
-// Backend API key requirement
-const char* API_KEY = "3cf562803c98eee6f2df540bdc3b45a61e2b93200790ca78dbbfe4c3ce47a38c";
-// Backend host/port for config fetch (HTTP). Example: "sfwe513.publicvm.com", port 80.
-const char* API_HOST = "sfwe513.publicvm.com";
-const int   API_PORT = 80;
+const char* CONFIG_REQUEST_EVENT = "Photon2_Config_Request";
 
 // |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
 const int LED_D7 = D7;
@@ -40,11 +34,6 @@ const int LED_D7 = D7;
 // |~~~~~~~~~~~~~~| Particle Vars |~~~~~~~~~~~~~~|
 String deviceId;
 unsigned long measurementIntervalMs = MEASUREMENT_INTERVAL_MS; // updated via server config
-
-// |~~~~~~~~~~~~~~| HTTP Client for config fetch |~~~~~~~~~~~~~~|
-HttpClient http;
-http_request_t request;
-http_response_t response;
 
 // |~~~~~~~~~~~~~~| Sensor Vars |~~~~~~~~~~~~~~|
 MAX30105 particleSensor;
@@ -293,30 +282,64 @@ int parseFrequencySeconds(const String &body) {
   return body.substring(start, idx).toInt();
 }
 
-void fetchMeasurementFrequency() {
-  request.hostname = API_HOST;
-  request.port = API_PORT;
-  request.path = String::format("/api/device/config/%s", deviceId.c_str());
-
-  http_header_t headers[] = {
-    { "Content-Type", "application/json" },
-    { "x-api-key", API_KEY },
-    { "User-Agent", "Photon2" },
-    { NULL, NULL }
-  };
-
-  response.body = "";
-  int status = http.get(request, response, headers);
-  if (status == 0 && response.status == 200) {
-    int seconds = parseFrequencySeconds(response.body);
-    if (seconds > 0) {
-      measurementIntervalMs = (unsigned long)seconds * 1000UL;
-      Serial.printlnf("Updated measurement interval to %d seconds", seconds);
-      nextPromptMs = millis() + measurementIntervalMs;
-    }
-  } else {
-    Serial.printlnf("Config fetch failed (status=%d http=%d)", status, response.status);
+void requestMeasurementFrequency() {
+  // Publish the event, the server will receive it via the webhook
+  if (!Particle.connected()) {
+    Serial.println("Cloud not connected, delaying config request...");
+    return;
   }
+
+  bool ok = Particle.publish(CONFIG_REQUEST_EVENT, deviceId, PRIVATE);
+  if (ok) {
+      Serial.println("Published config request event.");
+  } else {
+      Serial.println("Failed to publish config request.");
+  }
+}
+
+void onConfigResponse(const char *event, const char *data) {
+  if (!data) {
+    return;
+  }
+
+  Serial.printlnf("Config response received: %s", data);
+
+  // parse JSON to get measurementFrequencySeconds
+  String body = data;
+  int idx = body.indexOf("measurementFrequencySeconds");
+  if (idx >= 0) {
+    idx = body.indexOf(":", idx);
+    if (idx < 0) {
+      return;
+    }
+
+    unsigned int i = idx;
+    while (i < body.length() && !isDigit(body[i])) i++;
+    unsigned int start = i;
+    while (i < body.length() && isDigit(body[i])) i++;
+    
+    int frequencySec = body.substring(start, i).toInt();
+
+    if (frequencySec > 0) {
+        measurementIntervalMs = frequencySec * 1000UL;
+        nextPromptMs = millis() + measurementIntervalMs;
+        Serial.printlnf("Updated measurement interval: %d sec", frequencySec);
+    }
+  }
+}
+
+void onCloudConnect(const char* event, const char* data) {
+    if (!data) {
+      return;
+    }
+    
+    if (String(data) != "connected") {
+      return;
+    }
+
+    Serial.println("Cloud connected! Requesting measurement frequency...");
+    requestMeasurementFrequency();
+    lastFrequencyFetchMs = millis();
 }
 
 // Reset the sensor value storage to help increase accuracy 
@@ -493,6 +516,10 @@ void setup() {
     // Subscribe to webhook response/error for ACK behavior
     Particle.subscribe(String::format("hook-response/%s", MEAS_EVENT), onHookResponse, MY_DEVICES);
     Particle.subscribe(String::format("hook-error/%s",    MEAS_EVENT), onHookError,    MY_DEVICES);
+    Particle.subscribe(String::format("hook-response/%s", CONFIG_REQUEST_EVENT), onConfigResponse, MY_DEVICES);
+    Particle.subscribe(String::format("hook-error/%s",    CONFIG_REQUEST_EVENT), onHookError,    MY_DEVICES);
+
+    Particle.subscribe("spark/status", onCloudConnect, MY_DEVICES);
 
     // Sensor init
     if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
@@ -515,12 +542,14 @@ void setup() {
     particleSensor.setPulseAmplitudeGreen(0);
 
     Serial.println("MAX30102 initialized.");
-
-    if (millis() - lastFrequencyFetchMs >= FREQUENCY_REFRESH_MS) {
-      fetchMeasurementFrequency();
-      lastFrequencyFetchMs = millis();
-  }
+    
     nextPromptMs = millis() + 2000;
+
+    waitFor(Particle.connected, 10000); // wait up to 10s
+    if (Particle.connected()) {
+      requestMeasurementFrequency();
+    } 
+    lastFrequencyFetchMs = millis();
 
     enterState(STATE_IDLE_WAIT);
 }
@@ -541,6 +570,11 @@ void loop() {
 
   // Prune when RTC valid
   queuePruneOlderThan24h();
+
+  if (millis() - lastFrequencyFetchMs >= FREQUENCY_REFRESH_MS && isOnline()) {
+    requestMeasurementFrequency();
+    lastFrequencyFetchMs = millis();
+  }
 
   // State Machine Central
   switch (state) {
@@ -680,9 +714,6 @@ void loop() {
             if (pendingFromQueue) {
                 queuePopOldest();
             }
-
-            // Refresh cadence in case physician override changed
-            fetchMeasurementFrequency();
 
             // Schedule next prompt interval
             nextPromptMs = now + measurementIntervalMs;
