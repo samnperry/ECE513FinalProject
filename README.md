@@ -6,9 +6,8 @@ Live site: https://sfwe513.publicvm.com
 API base: https://sfwe513.publicvm.com/api
 
 ## Accounts
-- Patient with recent data: `testuser@example.com` / `1234`
-- Physician account: `testphysician@example.com` / `123`
-(Replace with your actual demo creds if different.)
+- Patient (example): `testuser@example.com` / `1234!`
+- Physician (example): `testphysician@example.com` / `123` 
 
 ## What’s included
 - React SPA served by Nginx (`npm run build` output in `/var/www/heartapp`).
