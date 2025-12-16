@@ -2,34 +2,32 @@
 // Connects Sensors to AWS through Particle Cloud. //
 /////////////////////////////////////////////////////
 
-#include "Particle.h"
+#include "Particle.h"        // Particle Library for Photon 2 use
 #include "MAX30105.h"        // SparkFun-MAX3010x
 #include "spo2_algorithm.h"  // Same library for sensor
 
-SYSTEM_THREAD(ENABLED); // keeps loop() responsive during cloud reconnects
+SYSTEM_THREAD(ENABLED);      // keeps loop() responsive during cloud reconnects
 
-// |~~~~~~~~~~~~~~| Defaults / Requirements |~~~~~~~~~~~~~~|
+// |~~~~~~~~~~~~~~| Parameter Init |~~~~~~~~~~~~~~|
 const unsigned long MEASUREMENT_INTERVAL_MS = 5UL * 60UL * 1000UL;  // default: 30 min
-const unsigned long PROMPT_WINDOW_MS        = 5UL  * 60UL * 1000UL; // prompt window: 5 min
+const unsigned long PROMPT_WINDOW_MS        = 5UL * 60UL * 1000UL;  // prompt window: 5 min
 const unsigned long LED_BLINK_MS            = 500;                  // blink speed
-const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling
+const unsigned long SAMPLE_INTERVAL_MS      = 40;                   // 25 Hz sampling on sensor
 const unsigned long ACK_TIMEOUT_MS          = 20UL * 1000UL;        // wait up to 20s for webhook response
 const unsigned long BACKLOG_FLUSH_DELAY_MS  = 20UL * 1000UL;        // stay idle 20s between backlog attempts
-const unsigned long FREQUENCY_REFRESH_MS = 60UL * 60UL * 1000UL;    // 1 hour
+const unsigned long FREQUENCY_REFRESH_MS    = 60UL * 60UL * 1000UL; // 1 hour
 unsigned long lastFrequencyFetchMs = 0;
+const int LED_D7 = D7;
 
-const uint8_t ALLOWED_START_HOUR = 6;   // 6am
-const uint8_t ALLOWED_END_HOUR   = 22;  // 10pm
+const uint8_t ALLOWED_START_HOUR = 6;   // default: 6am
+const uint8_t ALLOWED_END_HOUR   = 22;  // default: 10pm
 
-const uint32_t FINGER_IR_THRESHOLD = 20000; // tune for your sensor/module
+const uint32_t FINGER_IR_THRESHOLD = 20000; // tune the sensor for finger detection
 const uint8_t  STABLE_REQUIRED     = 6;     // consecutive valid algorithm outputs needed
 
 // Particle webhook event name 
 const char* MEAS_EVENT = "Photon2_SendEvent";
 const char* CONFIG_REQUEST_EVENT = "Photon2_Config_Request";
-
-// |~~~~~~~~~~~~~~| D7 (optional debug LED) |~~~~~~~~~~~~~~|
-const int LED_D7 = D7;
 
 // |~~~~~~~~~~~~~~| Particle Vars |~~~~~~~~~~~~~~|
 String deviceId;
@@ -76,10 +74,12 @@ const int EEPROM_ADDR_RECORDS = EEPROM_ADDR_HEADER + sizeof(QueueHeader);
 
 QueueHeader qh;
 
+// Get a measure addr
 int recordAddr(uint16_t idx) {
   return EEPROM_ADDR_RECORDS + (int)(idx * sizeof(MeasurementRecord));
 }
 
+//Save Data
 void queueSaveHeader() {
   EEPROM.put(EEPROM_ADDR_HEADER, qh);
 }
@@ -110,6 +110,7 @@ bool queuePopOldest() {
   return true;
 }
 
+// Input new measure
 bool queuePush(const MeasurementRecord &rec) {
   uint16_t writeIdx = (qh.head + qh.count) % QUEUE_CAPACITY;
 
@@ -269,6 +270,7 @@ uint32_t bestEffortTimestamp() {
   return 0;
 }
 
+// Get Measurement frequency from website data sent
 int parseFrequencySeconds(const String &body) {
   int idx = body.indexOf("measurementFrequencySeconds");
   if (idx < 0) return -1;
@@ -282,6 +284,7 @@ int parseFrequencySeconds(const String &body) {
   return body.substring(start, idx).toInt();
 }
 
+// Get current server config
 void requestMeasurementFrequency() {
   // Publish the event, the server will receive it via the webhook
   if (!Particle.connected()) {
@@ -297,6 +300,7 @@ void requestMeasurementFrequency() {
   }
 }
 
+// Extract the config response 
 void onConfigResponse(const char *event, const char *data) {
   if (!data) {
     return;
@@ -409,6 +413,7 @@ void updateMax30102() {
     }
 }
 
+// Send data to the server
 bool publishMeasurement(const MeasurementRecord &rec) {
     // Build JSON payload
         String payload = String::format(
