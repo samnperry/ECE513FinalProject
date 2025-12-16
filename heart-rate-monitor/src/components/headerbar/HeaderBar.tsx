@@ -60,10 +60,6 @@ export default function Header() {
         </nav>
 
         <div className='topright'>
-          <div className='headerIconsContainer'>
-            {/* placeholder for now */}
-            <Phonelink /> 
-          </div>
 
           {isAuthenticated && (
             <div className='headerIconsContainer' onClick={handleLogout}>
