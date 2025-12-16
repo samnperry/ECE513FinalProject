@@ -97,8 +97,8 @@ npm start
 - Port 80 stays open for devices/ACME; 443 for browsers.
 
 ## Videos
-- Pitch video: <add-link>
-- Demo video: <add-link>
+- Pitch video: https://youtu.be/VzW7ccYhC2E
+- Demo video: https://youtu.be/WQOrQn33g80
 
 ## Recent data accounts
 - Patient: `testuser@example.com` / `1234`
