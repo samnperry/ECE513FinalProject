@@ -6,8 +6,8 @@ Live site: https://sfwe513.publicvm.com
 API base: https://sfwe513.publicvm.com/api
 
 ## Accounts
-- Patient (example): `testuser@example.com` / `1234!` *(replace with the actual user creds with recent data)*
-- Physician (example): `testphysician@example.com` / `123` *(replace with the actual physician creds)*
+- Patient (example): `testuser@example.com` / `1234!`
+- Physician (example): `testphysician@example.com` / `123` 
 
 ## What’s included
 - React frontend (SPA) built from `npm run build`, served by Nginx.
