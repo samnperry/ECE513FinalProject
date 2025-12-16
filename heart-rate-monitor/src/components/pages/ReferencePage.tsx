@@ -1,11 +1,52 @@
 import React from "react";
 import "./Pages.css";
 
-const REFERENCE_ITEMS = [
-  { title: "Backend APIs", detail: "List REST endpoints (e.g., /api/auth, /api/device, /api/measurements)." },
-  { title: "Libraries", detail: "@mui/material, React Router, bcrypt, mongoose, express, jwt-simple." },
-  { title: "Hardware", detail: "Photon 2 device connection details and any firmware references." },
-  { title: "Docs & Links", detail: "Add URLs for API docs, design docs, and testing notes." },
+const REFERENCE_SECTIONS = [
+  {
+    title: "Third-party APIs / Services",
+    items: [
+      "Particle Cloud Webhooks: ingest measurements (Photon2_SendEvent) and serve config (Photon2_Config_Request).",
+      "MongoDB Atlas: managed database for users, devices, measurements.",
+      "Let’s Encrypt + Certbot: TLS certificates for sfwe513.publicvm.com.",
+      "Nginx: reverse proxy and static asset hosting on EC2."
+    ]
+  },
+  {
+    title: "Backend Libraries",
+    items: [
+      "Express 5, cors, express.json for REST API routing.",
+      "mongoose for MongoDB models (User, Device, Measurement).",
+      "bcrypt for password hashing; jwt-simple for JWT auth.",
+      "Node.js runtime managed by pm2 on EC2."
+    ]
+  },
+  {
+    title: "Frontend Libraries",
+    items: [
+      "React + TypeScript (CRA), react-router-dom for routing.",
+      "Chart.js for weekly/daily heart rate & SpO₂ charts.",
+      "@mui/material and @mui/icons-material for UI icons and styling.",
+      "Fetch API for HTTPS requests to https://sfwe513.publicvm.com/api."
+    ]
+  },
+  {
+    title: "Hardware / Firmware",
+    items: [
+      "Particle Photon 2 (P2) running Particle Device OS.",
+      "SparkFun MAX3010x sensor library and spo2_algorithm for HR/SpO₂.",
+      "Particle HttpClient for GET /api/device/config/:deviceId and POST /api/measurements with x-api-key.",
+      "Offline queue in EEPROM; state machine for prompt/acquire/send."
+    ]
+  },
+  {
+    title: "Docs & Links",
+    items: [
+      "React docs: https://react.dev/",
+      "Express docs: https://expressjs.com/",
+      "Chart.js docs: https://www.chartjs.org/docs/latest/",
+      "Particle webhooks: https://docs.particle.io/"
+    ]
+  }
 ];
 
 export function ReferencePage() {
@@ -13,14 +54,18 @@ export function ReferencePage() {
     <main className="page-container">
       <h1 className="page-title">References</h1>
       <p className="muted">
-        Placeholder page for APIs, libraries, and documentation. Replace the bullets below with your actual notes.
+        Third-party APIs, libraries, and code used across the frontend, backend, and device.
       </p>
 
       <div className="simple-grid">
-        {REFERENCE_ITEMS.map((item) => (
-          <div className="card" key={item.title}>
-            <h2>{item.title}</h2>
-            <p className="muted">{item.detail}</p>
+        {REFERENCE_SECTIONS.map((section) => (
+          <div className="card" key={section.title}>
+            <h2>{section.title}</h2>
+            <ul className="feature-list">
+              {section.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
         ))}
       </div>
