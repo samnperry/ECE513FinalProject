@@ -6,7 +6,9 @@ Live site: https://sfwe513.publicvm.com
 API base: https://sfwe513.publicvm.com/api
 
 ## Accounts
-- Patient (example): `testuser@example.com` / `1234!`
+- Patient (example): `testuser@example.com` / `1234`
+   - To view data related to patient collected from device, please enter the device ID (0a10aced202194944a064eec) into the text box and click refresh:
+   - <img width="3386" height="1902" alt="image" src="https://github.com/user-attachments/assets/e9d7856e-8cba-4807-b1f1-307b332a8100" />
 - Physician (example): `testphysician@example.com` / `123` 
 
 ## What’s included
